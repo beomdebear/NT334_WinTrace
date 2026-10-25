@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Forensics & Local Data
+*.db
+*.sqlite3
+evidence/
+datasets/
+*.evtx
+*.E01
+*.raw
+*.pcap

@@ -1,0 +1,149 @@
+[
+  {
+    "event_id": "EVT-0001",
+    "timestamp": "2026-10-25T02:05:12+00:00",
+    "timestamp_desc": "Event Generated Time",
+    "artifact_source": "EVTX",
+    "source_file": "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+    "target_path": "C:\\Windows\\System32\\winlogon.exe",
+    "message": "User Alice (S-1-5-21-3928172839-1002) logged on interactively (LogonType: 2) from WORKSTATION",
+    "data_type": "windows:evtx:security",
+    "parser": "winevt",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "event_id": 4624,
+      "logon_type": 2
+    }
+  },
+  {
+    "event_id": "EVT-0002",
+    "timestamp": "2026-10-25T02:10:00+00:00",
+    "timestamp_desc": "BagMRU Last Interacted",
+    "artifact_source": "ShellBags",
+    "source_file": "C:\\Users\\Alice\\AppData\\Local\\Microsoft\\Windows\\UsrClass.dat",
+    "target_path": "C:\\Users\\Alice\\Documents\\Project",
+    "message": "User navigated to folder Project via Windows Explorer [BagMRU order 1]",
+    "data_type": "windows:registry:bagmru",
+    "parser": "winreg/shellbags",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "mru_order": 1,
+      "node_slot": 14
+    }
+  },
+  {
+    "event_id": "EVT-0003",
+    "timestamp": "2026-10-25T02:12:00+00:00",
+    "timestamp_desc": "LNK Target File Accessed",
+    "artifact_source": "LNK",
+    "source_file": "C:\\Users\\Alice\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\confidential_report.docx.lnk",
+    "target_path": "C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx",
+    "message": "Shortcut accessed pointing to confidential_report.docx [Drive Fixed, Vol A8C2-4F10]",
+    "data_type": "windows:lnk:link",
+    "parser": "lnk",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "volume_serial": "A8C2-4F10",
+      "target_size": 28672
+    }
+  },
+  {
+    "event_id": "EVT-0004",
+    "timestamp": "2026-10-25T02:13:58+00:00",
+    "timestamp_desc": "Process Creation",
+    "artifact_source": "EVTX",
+    "source_file": "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+    "target_path": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+    "message": "Process WINWORD.EXE started by explorer.exe [PID: 4892, User: Alice]",
+    "data_type": "windows:evtx:security",
+    "parser": "winevt",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "event_id": 4688,
+      "pid": 4892,
+      "parent_process": "explorer.exe"
+    }
+  },
+  {
+    "event_id": "EVT-0005",
+    "timestamp": "2026-10-25T02:14:00+00:00",
+    "timestamp_desc": "Last Time Executed",
+    "artifact_source": "Prefetch",
+    "source_file": "C:\\Windows\\Prefetch\\WINWORD.EXE-5C48A1B2.pf",
+    "target_path": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+    "message": "Executed WINWORD.EXE [Run Count: 14, Loaded C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx]",
+    "data_type": "windows:prefetch:execution",
+    "parser": "prefetch",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "run_count": 14,
+      "prefetch_hash": "5C48A1B2",
+      "referenced_files": [
+        "C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx"
+      ]
+    }
+  },
+  {
+    "event_id": "EVT-0006",
+    "timestamp": "2026-10-25T02:18:29+00:00",
+    "timestamp_desc": "Object Access (Delete Mask)",
+    "artifact_source": "EVTX",
+    "source_file": "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+    "target_path": "C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx",
+    "message": "File access mask 0x10000 (DELETE) requested by explorer.exe for user Alice",
+    "data_type": "windows:evtx:security",
+    "parser": "winevt",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "event_id": 4663,
+      "access_mask": "0x10000"
+    }
+  },
+  {
+    "event_id": "EVT-0007",
+    "timestamp": "2026-10-25T02:18:30+00:00",
+    "timestamp_desc": "Deletion Timestamp",
+    "artifact_source": "RecycleBin",
+    "source_file": "C:\\$Recycle.Bin\\S-1-5-21-3928172839-1002\\$I39F1AA.docx",
+    "target_path": "C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx",
+    "message": "File confidential_report.docx moved to Recycle Bin [Orig Size: 28672 bytes]",
+    "data_type": "windows:recycle_bin:index",
+    "parser": "recycle_bin",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "HIGH",
+    "extra_attributes": {
+      "original_size": 28672,
+      "index_filename": "$I39F1AA.docx"
+    }
+  },
+  {
+    "event_id": "EVT-0008",
+    "timestamp": "2026-10-25T02:25:00+00:00",
+    "timestamp_desc": "Last Time Executed",
+    "artifact_source": "Prefetch",
+    "source_file": "C:\\Windows\\Prefetch\\CMD.EXE-A09182BC.pf",
+    "target_path": "C:\\Windows\\System32\\cmd.exe",
+    "message": "Executed CMD.EXE [Run Count: 3, Parent explorer.exe]",
+    "data_type": "windows:prefetch:execution",
+    "parser": "prefetch",
+    "user_sid": "S-1-5-21-3928172839-1002",
+    "username": "Alice",
+    "confidence_level": "MEDIUM",
+    "extra_attributes": {
+      "run_count": 3
+    }
+  }
+]

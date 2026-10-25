@@ -1,0 +1,123 @@
+[
+  {
+    "finding_id": "FIND-001",
+    "event_a_id": "EVT-0002",
+    "event_b_id": "EVT-0003",
+    "event_a_desc": "[ShellBags] User navigated to folder Project via Windows Explorer [BagMRU order 1]",
+    "event_b_desc": "[LNK] Shortcut accessed pointing to confidential_report.docx [Drive Fixed, Vol A8C2-4F10]",
+    "time_delta_seconds": 120.0,
+    "time_delta_minutes": 2.0,
+    "matched_rules": [
+      "R01",
+      "R02",
+      "R03"
+    ],
+    "confidence_score": 90,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 2.0m (threshold 5.0m) | Target object relationship: Parent-child path | Corroborated across distinct sources: ShellBags <-> LNK | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-002",
+    "event_a_id": "EVT-0003",
+    "event_b_id": "EVT-0004",
+    "event_a_desc": "[LNK] Shortcut accessed pointing to confidential_report.docx [Drive Fixed, Vol A8C2-4F10]",
+    "event_b_desc": "[EVTX] Process WINWORD.EXE started by explorer.exe [PID: 4892, User: Alice]",
+    "time_delta_seconds": 118.0,
+    "time_delta_minutes": 1.97,
+    "matched_rules": [
+      "R01",
+      "R03",
+      "R04"
+    ],
+    "confidence_score": 80,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 2.0m (threshold 5.0m) | Corroborated across distinct sources: LNK <-> EVTX | Execution artifact directly correlates with document interaction | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-003",
+    "event_a_id": "EVT-0003",
+    "event_b_id": "EVT-0005",
+    "event_a_desc": "[LNK] Shortcut accessed pointing to confidential_report.docx [Drive Fixed, Vol A8C2-4F10]",
+    "event_b_desc": "[Prefetch] Executed WINWORD.EXE [Run Count: 14, Loaded C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx]",
+    "time_delta_seconds": 120.0,
+    "time_delta_minutes": 2.0,
+    "matched_rules": [
+      "R01",
+      "R03",
+      "R04"
+    ],
+    "confidence_score": 80,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 2.0m (threshold 5.0m) | Corroborated across distinct sources: LNK <-> Prefetch | Execution artifact directly correlates with document interaction | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-004",
+    "event_a_id": "EVT-0004",
+    "event_b_id": "EVT-0005",
+    "event_a_desc": "[EVTX] Process WINWORD.EXE started by explorer.exe [PID: 4892, User: Alice]",
+    "event_b_desc": "[Prefetch] Executed WINWORD.EXE [Run Count: 14, Loaded C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx]",
+    "time_delta_seconds": 2.0,
+    "time_delta_minutes": 0.03,
+    "matched_rules": [
+      "R01",
+      "R02",
+      "R03"
+    ],
+    "confidence_score": 90,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 0.0m (threshold 5.0m) | Target object relationship: Same path | Corroborated across distinct sources: EVTX <-> Prefetch | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-005",
+    "event_a_id": "EVT-0003",
+    "event_b_id": "EVT-0007",
+    "event_a_desc": "[LNK] Shortcut accessed pointing to confidential_report.docx [Drive Fixed, Vol A8C2-4F10]",
+    "event_b_desc": "[RecycleBin] File confidential_report.docx moved to Recycle Bin [Orig Size: 28672 bytes]",
+    "time_delta_seconds": 390.0,
+    "time_delta_minutes": 6.5,
+    "matched_rules": [
+      "R02",
+      "R03",
+      "R05"
+    ],
+    "confidence_score": 90,
+    "confidence_level": "HIGH",
+    "explanation": "Target object relationship: Same path | Corroborated across distinct sources: LNK <-> RecycleBin | Prior user/application interaction precedes file deletion activity | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-006",
+    "event_a_id": "EVT-0005",
+    "event_b_id": "EVT-0007",
+    "event_a_desc": "[Prefetch] Executed WINWORD.EXE [Run Count: 14, Loaded C:\\Users\\Alice\\Documents\\Project\\confidential_report.docx]",
+    "event_b_desc": "[RecycleBin] File confidential_report.docx moved to Recycle Bin [Orig Size: 28672 bytes]",
+    "time_delta_seconds": 270.0,
+    "time_delta_minutes": 4.5,
+    "matched_rules": [
+      "R01",
+      "R03",
+      "R04",
+      "R05"
+    ],
+    "confidence_score": 100,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 4.5m (threshold 5.0m) | Corroborated across distinct sources: Prefetch <-> RecycleBin | Execution artifact directly correlates with document interaction | Prior user/application interaction precedes file deletion activity | Consistent user attribution: Alice"
+  },
+  {
+    "finding_id": "FIND-007",
+    "event_a_id": "EVT-0006",
+    "event_b_id": "EVT-0007",
+    "event_a_desc": "[EVTX] File access mask 0x10000 (DELETE) requested by explorer.exe for user Alice",
+    "event_b_desc": "[RecycleBin] File confidential_report.docx moved to Recycle Bin [Orig Size: 28672 bytes]",
+    "time_delta_seconds": 1.0,
+    "time_delta_minutes": 0.02,
+    "matched_rules": [
+      "R01",
+      "R02",
+      "R03",
+      "R05"
+    ],
+    "confidence_score": 100,
+    "confidence_level": "HIGH",
+    "explanation": "Events occurred within 0.0m (threshold 5.0m) | Target object relationship: Same path | Corroborated across distinct sources: EVTX <-> RecycleBin | Prior user/application interaction precedes file deletion activity | Consistent user attribution: Alice"
+  }
+]
