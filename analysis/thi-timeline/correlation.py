@@ -1,90 +1,108 @@
-# WinTrace – Event Correlation Rules Draft
+from datetime import datetime, timezone
+from itertools import combinations
+from pathlib import PureWindowsPath
 
-## 1. Mục tiêu
+# Du lieu forensic gia lap
+EVENTS = [
+    {
+        "id": "E01",
+        "time": "2026-10-25T02:10:00+00:00",
+        "artifact": "ShellBags",
+        "path": r"C:\Users\Alice\Documents\Project"
+    },
+    {
+        "id": "E02",
+        "time": "2026-10-25T02:12:00+00:00",
+        "artifact": "LNK",
+        "path": r"C:\Users\Alice\Documents\Project\report.docx"
+    },
+    {
+        "id": "E03",
+        "time": "2026-10-25T02:14:00+00:00",
+        "artifact": "Prefetch",
+        "path": r"C:\Windows\WINWORD.EXE"
+    },
+    {
+        "id": "E04",
+        "time": "2026-10-25T02:19:00+00:00",
+        "artifact": "Recycle Bin",
+        "path": r"C:\Users\Alice\Documents\Project\old.txt"
+    }
+]
 
-Thiết kế tập quy tắc xác định những sự kiện forensic có khả năng liên quan với nhau, hỗ trợ điều tra viên tái dựng hoạt động trên hệ thống Windows.
 
-Kết quả correlation là các candidate findings cần kiểm chứng. Không tự động xem chúng là kết luận chắc chắn.
+def parse_time(value):
+    timestamp = datetime.fromisoformat(value)
 
-## 2. R01 – Temporal Proximity
+    if timestamp.tzinfo is None:
+        raise ValueError("Timestamp must have a timezone")
 
-**Mục tiêu:** Xác định những sự kiện có timestamp gần nhau.
+    return timestamp.astimezone(timezone.utc)
 
-**Điều kiện:**
-- Các timestamp phải có thể so sánh trên cùng cơ sở thời gian.
-- Timestamp type của từng event phải được xác định.
-- Khoảng cách thời gian nằm trong một cửa sổ điều tra được cấu hình.
 
-**Đầu ra:** Danh sách các event pairs có quan hệ gần nhau về thời gian.
+def path_relation(path1, path2):
+    a = tuple(p.casefold() for p in PureWindowsPath(path1).parts)
+    b = tuple(p.casefold() for p in PureWindowsPath(path2).parts)
 
-**Giới hạn:** Temporal proximity không chứng minh quan hệ nhân quả.
+    if a == b:
+        return "Same path"
 
-## 3. R02 – Object Association
+    if len(a) < len(b) and b[:len(a)] == a:
+        return "Parent-child path"
 
-**Mục tiêu:** Nhận diện những event liên quan cùng một file, thư mục hoặc đối tượng.
+    if len(b) < len(a) and a[:len(b)] == b:
+        return "Parent-child path"
 
-**Điều kiện:**
-- Có dữ liệu object path hoặc định danh đối tượng phù hợp.
-- Đường dẫn được chuẩn hóa khi có đủ thông tin.
-- Phân biệt exact path match và parent–child relationship.
+    return None
 
-**Đầu ra:** Các nhóm sự kiện có liên quan đến cùng đối tượng.
 
-**Giới hạn:** Hai đường dẫn có tên giống nhau trên những volume khác nhau có thể là các đối tượng khác nhau.
+def correlate_events(events, window_minutes=5):
+    findings = []
 
-## 4. R03 – Cross-Artifact Support
+    for event_a, event_b in combinations(events, 2):
 
-**Mục tiêu:** Tìm những nguồn evidence khác nhau có khả năng hỗ trợ cùng giả thuyết.
+        delta = abs(
+            (parse_time(event_a["time"]) -
+             parse_time(event_b["time"])).total_seconds()
+        ) / 60
 
-**Điều kiện:**
-- Có tối thiểu hai nguồn artifact phù hợp.
-- Các artifact có ý nghĩa forensic bổ trợ nhau.
-- Không chỉ dựa vào việc trùng timestamp.
+        matched_rules = []
 
-**Đầu ra:** Nhóm supporting events và thông tin nguồn.
+        # R01: Temporal Proximity
+        if delta <= window_minutes:
+            matched_rules.append("R01")
 
-**Giới hạn:** Hai event có thể bắt nguồn từ cùng một hoạt động ghi dữ liệu, không nhất thiết là hai nguồn chứng cứ độc lập.
+        # R02: Object Association
+        relation = path_relation(
+            event_a["path"],
+            event_b["path"]
+        )
 
-## 5. R04 – Program–File Association
+        if relation:
+            matched_rules.append("R02")
 
-**Mục tiêu:** Xác định các dấu vết thực thi chương trình và tương tác file có khả năng liên quan.
+        # R03: Cross-Artifact Candidate
+        if (
+            event_a["artifact"] != event_b["artifact"]
+            and (delta <= window_minutes or relation)
+        ):
+            matched_rules.append("R03")
 
-**Điều kiện:**
-- Có execution evidence từ Prefetch hoặc artifact phù hợp.
-- Có file reference evidence như LNK hoặc application artifacts.
-- Ứng dụng và loại file có quan hệ hợp lý.
-- Timestamp semantics cho phép đánh giá mối liên hệ thời gian.
+        if matched_rules:
+            findings.append({
+                "event_a": event_a["id"],
+                "event_b": event_b["id"],
+                "time_delta_minutes": round(delta, 2),
+                "matched_rules": matched_rules
+            })
 
-**Đầu ra:** Program–file association candidates.
+    return findings
 
-**Giới hạn:** Chương trình được thực thi không đồng nghĩa đã mở file được tham chiếu.
 
-## 6. R05 – Deletion Context
+if __name__ == "__main__":
+    results = correlate_events(EVENTS)
 
-**Mục tiêu:** Tìm những sự kiện liên quan đến file hoặc thư mục trước khi xuất hiện deletion evidence.
+    print("=== WinTrace Correlation Results ===")
 
-**Điều kiện:**
-- Có artifact hỗ trợ hoạt động xóa, chẳng hạn Recycle Bin metadata.
-- Có những event tham chiếu cùng file hoặc đối tượng liên quan.
-- Thứ tự thời gian đã được kiểm tra.
-
-**Đầu ra:** Candidate activity sequence xung quanh dấu vết xóa file.
-
-**Giới hạn:** Không khẳng định động cơ xóa file hoặc danh tính người thực hiện nếu thiếu bằng chứng.
-
-## 7. Kiểm chứng correlation findings
-
-Với mỗi candidate finding, điều tra viên cần kiểm tra:
-- Evidence nguồn.
-- Timestamp semantics.
-- Mối liên hệ đối tượng.
-- Những giả thuyết thay thế.
-- Sự phù hợp với ground truth nếu có.
-
-## 8. Hướng triển khai tuần 2
-
-Correlation engine nhận các event đã được chuẩn hóa từ pipeline của Nam theo schema thống nhất với Quyên.
-
-Module thực hiện việc lựa chọn event candidates, áp dụng các rule, nhóm sự kiện và xuất thông tin phục vụ kiểm chứng.
-
-Thi không chịu trách nhiệm thiết kế lại evidence schema hoặc thay đổi dữ liệu nguồn.
+    for finding in results:
+        print(finding)
