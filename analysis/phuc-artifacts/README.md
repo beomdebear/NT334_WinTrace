@@ -5,7 +5,7 @@ Phân tích ShellBags, LNK, Jump Lists, Prefetch, Recycle Bin trên dataset **NI
 ## Evidence
 - Ảnh đĩa: `cfreds_2015_data_leakage_pc.dd` – MD5 `A49D1254C873808C58E6F1BCD60B5BDE` (khớp NIST), SHA-256 `026C1436…98BE4E2`
 - Nguồn: https://cfreds.nist.gov/all/NIST/DataLeakageCase – **không đưa evidence lên repo**
-- Timezone máy evidence: UTC−4 (EDT) – xem `evidence/timezone.md`. Mọi timestamp trong thư mục này là **UTC**.
+- Timezone máy evidence: UTC−4 (EDT) – xem `case_notes/timezone.md`. Mọi timestamp trong thư mục này là **UTC**.
 
 ## Nội dung
 
@@ -18,7 +18,7 @@ Phân tích ShellBags, LNK, Jump Lists, Prefetch, Recycle Bin trên dataset **NI
 | `shellbags_findings.csv` | 383 event ShellBags theo schema mục 13.1 của đề (30 verified) |
 | `../../results/case01_shellbags_events.csv` | Cùng 383 event, theo **schema chung của nhóm** (`docs/event_schema.md`) – đã kiểm hợp lệ với `src/schema.py::ForensicEvent` |
 | `scripts/` | Script thu thập và chuyển đổi (xem dưới) |
-| `evidence/` | Timezone, phiên bản tool |
+| `case_notes/` | Timezone, phiên bản tool, ảnh kiểm chứng (`case_notes/img/`) |
 
 ## Scripts
 
@@ -31,5 +31,5 @@ Phân tích ShellBags, LNK, Jump Lists, Prefetch, Recycle Bin trên dataset **NI
 | `to_team_schema.py shellbags_findings.csv -o case01_shellbags_events.csv --username informant` | Chuyển sang schema chung của nhóm, giữ `event_id` và `validation_status` |
 
 ## Ghi chú
-- Đường dẫn `notes/...`, `output/...` trong các báo cáo là thư mục case cục bộ (không nằm trong repo). Ảnh kiểm chứng sẽ được bổ sung vào `evidence/img/`.
+- Đường dẫn `notes/...`, `output/...` trong các báo cáo là thư mục case cục bộ (không nằm trong repo). Ảnh kiểm chứng lưu ở `case_notes/img/` (không dùng tên `evidence/` vì `.gitignore` của nhóm chặn mọi thư mục `evidence/`).
 - Kết quả tuần 1: 3 finding verified bằng GUI độc lập (F001, F004, F005); 19/26 hành động trong đáp án NIST có artifact khớp.

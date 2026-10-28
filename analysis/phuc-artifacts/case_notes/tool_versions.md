@@ -1,0 +1,31 @@
+﻿# Tool versions – 2026-10-28 09:23 (local)
+
+- EvtxECmd.exe: 2026.10.2.0
+- EZViewer.exe: 2026.10.0.0
+- Hasher.exe: 2026.10.0.0
+- iisGeolocate.exe: 2026.10.1.0
+- JumpListExplorer.exe: 2026.10.1.0
+- MFTExplorer.exe: 2026.10.0.0
+- RECmd.exe: 2026.10.2.0
+- RegistryExplorer.exe: 2026.10.1.0
+- SDBExplorer.exe: 2026.10.0.0
+- ShellBagsExplorer.exe: 2026.10.1.0
+- SQLECmd.exe: 2026.10.3.0
+- TimelineExplorer.exe: 2026.10.0.0
+- XWFIM.exe: 2026.10.1.0
+- AmcacheParser.exe: 2026.10.1.0
+- AppCompatCacheParser.exe: 2026.10.1.0
+- bstrings.exe: 2026.10.1.0
+- JLECmd.exe: 2026.10.5.0
+- LECmd.exe: 2026.10.3.0
+- MFTECmd.exe: 2026.10.6.0
+- PECmd.exe: 2026.10.3.0
+- RBCmd.exe: 2026.10.1.0
+- RecentFileCacheParser.exe: 2026.10.2.0
+- rla.exe: 2026.10.1.0
+- SBECmd.exe: 2026.10.2.0
+- SrumECmd.exe: 2026.10.1.0
+- SumECmd.exe: 2026.10.1.0
+- TimeApp.exe: 2026.10.0.0
+- VSCMount.exe: 2026.10.0.0
+- WxTCmd.exe: 2026.10.1.0
