@@ -228,3 +228,21 @@ datasets/
 *.E01
 *.raw
 *.pcap
+
+# Forensic artifacts bổ sung (Phúc) – ảnh đĩa, hive, artifact thô, output Plaso
+*.dd
+*.vmdk
+*.vhd
+*.vhdx
+*.7z
+*.7z.*
+*.plaso
+evidence_work/
+case01/
+NTUSER.DAT*
+UsrClass.dat*
+**/hives/
+*.pf
+*.lnk
+*.automaticDestinations-ms
+*.customDestinations-ms
