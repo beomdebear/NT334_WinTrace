@@ -3,7 +3,12 @@
 **Dự án:** WinTrace – Automated Windows Forensic Artifact Extraction & Super Timeline Analysis
 **Người thực hiện:** Phúc – Windows Forensic Artifact Analyst
 **Ngày:** 2026-10-28
-**Trạng thái:** Bản nháp – cần Phúc đọc lại, bổ sung ảnh chụp
+**Trạng thái:** Hoàn thành tuần 1 (mục 5 – đối chiếu Plaso – chờ CSV của Nam)
+
+> **Ba mức kết luận dùng trong báo cáo:**
+> - **Observed** – artifact cho thấy trực tiếp (có tham chiếu file/dòng).
+> - **Inferred** – suy luận từ artifact, chưa có bằng chứng trực tiếp.
+> - **NIST-confirmed** – suy luận/quan sát khớp với đáp án chính thức của NIST (ground truth). Đây là kiểm chứng *bên ngoài*, khác với kiểm chứng bằng công cụ độc lập (ShellBags Explorer).
 
 > Quy ước giờ: mọi timestamp ở **UTC** (hậu tố Z). Giờ máy nghi phạm = UTC − 4h (EDT).
 > Đáp án NIST ghi theo giờ EDT, được quy về UTC (+4h) trước khi so sánh.
@@ -22,9 +27,9 @@
 | Mount | FTK Imager, Block Device / **Read Only**; phân vùng hệ thống → F:, System Reserved → E: |
 | User phân tích | `informant` |
 | Timezone máy evidence | Eastern Standard Time; Bias 300; ActiveTimeBias 240 ⇒ UTC−4 (EDT) trong giai đoạn sự kiện (DST 2015 bắt đầu 08/03) |
-| Bằng chứng timezone | SYSTEM `Select\Current`=1 → `ControlSet001\Control\TimeZoneInformation` (ảnh `notes/img/select_current.png`, `timezone.png`) |
+| Bằng chứng timezone | SYSTEM `Select\Current`=1 → `ControlSet001\Control\TimeZoneInformation` (ảnh `case_notes/img/select_current.png`, `case_notes/img/timezone.png`) |
 
-**Thu thập artifact:** script `day2_collect.ps1` copy từ F: sang `evidence_work/` (hive + .LOG1/.LOG2, Prefetch, LNK, Jump Lists, Recycle Bin) và hash SHA-256 toàn bộ. Hai lượt thu thập cho hash giống hệt ⇒ quy trình ổn định, không làm thay đổi evidence. Log: `notes/collection_log.md`.
+**Thu thập artifact:** script `day2_collect.ps1` copy từ F: sang `evidence_work/` (hive + .LOG1/.LOG2, Prefetch, LNK, Jump Lists, Recycle Bin) và hash SHA-256 toàn bộ. Hai lượt thu thập cho hash giống hệt ⇒ quy trình ổn định, không làm thay đổi evidence. Log: `case_notes/collection_log.md`; hash: `case_notes/integrity.md`.
 
 ## 2. Công cụ và phiên bản
 
@@ -38,10 +43,10 @@
 | PECmd | 2026.10.3 | Prefetch |
 | RBCmd | 2026.10.1 | Recycle Bin |
 | Timeline Explorer | 2026.10.0 | Xem CSV |
-| FTK Imager | (ghi phiên bản) | Mount ảnh đĩa read-only |
+| FTK Imager | 8.3.0.27 | Mount ảnh đĩa read-only |
 | `sbecmd_to_findings.py` | tự viết | Chuyển output SBECmd → schema nhóm |
 
-Toàn bộ lệnh chạy được ghi trong `notes/command_log.md`.
+Toàn bộ lệnh chạy được ghi trong `case_notes/command_log.md`.
 
 ## 3. ShellBags
 
@@ -56,7 +61,8 @@ Toàn bộ lệnh chạy được ghi trong `notes/command_log.md`.
 - Độ phân giải: shell item dùng FAT time (2 giây); hai hive ghi cùng thư mục lệch ~2 giây.
 
 ### 3.3. Kết quả trích xuất
-- **109 ShellBag** duy nhất từ 2 hive (SBECmd, 0 trùng) → **383 event** trong `shellbags_findings.csv` (theo schema nhóm, mỗi timestamp một event, có `timestamp_type`).
+- **109 ShellBag** duy nhất từ 2 hive (SBECmd, 0 trùng) → **383 event** trong `shellbags_findings.csv` (mỗi timestamp một event, có `timestamp_type`).
+- **Không mất tham chiếu:** cả 109/109 dòng SBECmd đều được trỏ tới từ `evidence_reference`. 5 ShellBag có mốc trùng hệt một ShellBag khác cùng BagPath (ổ D: và 4 thư viện) không tạo event riêng mà được ghép vào event sẵn có dưới dạng `also=Deduplicated.csv:L<n>`. Output gốc của SBECmd lưu tại `tool_output/sbecmd/Deduplicated.csv` (SHA-256 trong `case_notes/integrity.md`).
 - Phân bố `timestamp_type`: KeyLastWrite 104, FirstInteracted 70, FolderCreated/Modified/Accessed 56 mỗi loại, LastInteracted 41.
 - Nhóm thư mục đáng chú ý:
 
@@ -154,14 +160,14 @@ Toàn bộ lệnh chạy được ghi trong `notes/command_log.md`.
 
 | ID | Mô tả | Artifact | Thời gian (UTC) | Confidence | Validation |
 |---|---|---|---|---|---|
-| CASE01-F001 | Duyệt `Secret Project Data` trên `\\10.11.11.128\secured_drive` | ShellBags (2 hive), LNK, Jump List | 2015-03-23 20:23:28–20:28:17 | High | **Verified** (GUI + NIST) |
-| CASE01-F002 | V: là ổ mạng ánh xạ tới share | ShellBags, Jump List, LNK | 2015-03-23 20:27:24–20:27:33 | High | Xác nhận bởi NIST; chưa kiểm GUI |
-| CASE01-F003 | Tập kết dữ liệu mật tại `Desktop\S data` (sau đó bị xóa) | ShellBags | 2015-03-24 13:40:13–13:57:40 | Medium | Xác nhận bởi NIST; chưa kiểm GUI |
-| CASE01-F004 | `winter_whether_advisory.zip` được copy vào USB RM#2 (E:) và mở | ShellBags, LNK | 2015-03-24 13:59:38–14:01:32 | High | **Verified** (GUI + NIST) |
-| CASE01-F005 | Ghi CD với thư mục đổi tên viết tắt (CDBurn) | ShellBags, LNK | 2015-03-24 19:54:35–20:44:18 | High | **Verified** (GUI + NIST) |
-| CASE01-F006 | Google Drive được dùng 23–25/03 | ShellBags, Prefetch | 2015-03-23 20:05:34 – 2015-03-25 15:21:31 | Medium | Một phần (NIST) |
-| CASE01-F007 | Cài và chạy Eraser, CCleaner; thùng rác trống | Prefetch, ShellBags, RBCmd | 2015-03-25 14:50:14–15:18:29 | High | Xác nhận bởi NIST; chưa kiểm GUI |
-| CASE01-F008 | Soạn và xuất XPS thư xin nghỉ việc | LNK, Prefetch, Jump List | 2015-03-24 18:48:40; 2015-03-25 15:24–15:29 | High | Xác nhận bởi NIST |
+| CASE01-F001 | Duyệt `Secret Project Data` trên `\\10.11.11.128\secured_drive` | ShellBags (2 hive), LNK, Jump List | 2015-03-23 20:23:28–20:28:17 | High | **Verified (GUI)** + NIST-confirmed |
+| CASE01-F002 | V: là ổ mạng ánh xạ tới share | ShellBags, Jump List, LNK | 2015-03-23 20:27:24–20:27:33 | High | NIST-confirmed; chưa kiểm GUI |
+| CASE01-F003 | Tập kết dữ liệu mật tại `Desktop\S data` (sau đó bị xóa) | ShellBags | 2015-03-24 13:40:13–13:57:40 | Medium | NIST-confirmed; chưa kiểm GUI |
+| CASE01-F004 | `winter_whether_advisory.zip` được copy vào USB RM#2 (E:) và mở | ShellBags, LNK | 2015-03-24 13:59:38–14:01:32 | High | **Verified (GUI)** + NIST-confirmed |
+| CASE01-F005 | Ghi CD với thư mục đổi tên viết tắt (CDBurn) | ShellBags, LNK | 2015-03-24 19:54:35–20:44:18 | High | **Verified (GUI)** + NIST-confirmed |
+| CASE01-F006 | Google Drive được dùng 23–25/03 | ShellBags, Prefetch | 2015-03-23 20:05:34 – 2015-03-25 15:21:31 | Medium | NIST-confirmed một phần (lần chạy cuối); điểm .pf tạo muộn chưa giải thích |
+| CASE01-F007 | Cài và chạy Eraser, CCleaner; thùng rác trống | Prefetch, ShellBags, RBCmd | 2015-03-25 14:50:14–15:18:29 | High | NIST-confirmed; chưa kiểm GUI |
+| CASE01-F008 | Soạn và xuất XPS thư xin nghỉ việc | LNK, Prefetch, Jump List | 2015-03-24 18:48:40; 2015-03-25 15:24–15:29 | High | NIST-confirmed; chưa kiểm GUI |
 
 Chi tiết: `candidate_findings.md`, `manual_evidence.md`.
 

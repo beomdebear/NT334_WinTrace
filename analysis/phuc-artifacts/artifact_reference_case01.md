@@ -2,7 +2,7 @@
 
 Người soạn: Phúc (Windows Forensic Artifact Analyst) · Cập nhật: 2026-10-28
 Evidence: NIST CFReDS Data Leakage Case – PC image (Windows 7), user `informant`
-Quy ước giờ: mọi timestamp ở **UTC**. Giờ máy nghi phạm = UTC − 4h (EDT, xem `notes/timezone.md`).
+Quy ước giờ: mọi timestamp ở **UTC**. Giờ máy nghi phạm = UTC − 4h (EDT, xem `case_notes/timezone.md`).
 
 > Mục đích: với mỗi artifact, ghi rõ (1) nằm ở đâu, (2) tool nào đọc, (3) từng timestamp nghĩa là gì,
 > (4) **chứng minh được gì / KHÔNG chứng minh được gì**. Bảng (4) là đầu vào để Thi viết correlation rule

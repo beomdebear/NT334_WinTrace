@@ -1,7 +1,8 @@
 # Manual Evidence – CASE01
 
 > Mỗi finding được kiểm chứng thủ công bằng tool GUI độc lập với tool trích xuất (SBECmd).
-> Giờ UTC. Giờ máy nghi phạm = UTC − 4h (EDT, xem notes/timezone.md).
+> Ba mức kết luận: **Observed** (artifact cho thấy trực tiếp) · **Inferred** (suy luận) · **NIST-confirmed** (khớp đáp án chính thức). "Verified" ở đây nghĩa là đã kiểm chứng bằng công cụ GUI độc lập với SBECmd.
+> Giờ UTC. Giờ máy nghi phạm = UTC − 4h (EDT, xem `case_notes/timezone.md`).
 
 ## Thông tin evidence
 - Image: `cfreds_2015_data_leakage_pc.dd`
@@ -35,9 +36,10 @@
 - **Artifact bổ trợ:** LNK `(secret_project)_pricing_decision.xlsx.lnk` Created 2015-03-23 20:26:53Z (NetworkPath `\\10.11.11.128\SECURED_DRIVE`), `[secret_project]_final_meeting.pptx.lnk` Created 20:27:33Z.
 - **Observed:** user `informant` đã duyệt cây thư mục `Secret Project Data` trên share `\\10.11.11.128\secured_drive` trong khoảng 20:24–20:28Z ngày 2015-03-23 (16:24–16:28 EDT); 2 file trên share được mở qua Shell.
 - **Inferred:** user rà soát dữ liệu mật trước khi thu thập/rò rỉ.
+- **NIST-confirmed:** 16:23 EDT kết nối share (RunMRU 16:23:28 – khớp ShellBag `10.11.11.128` 20:23:28Z), 16:24 EDT duyệt thư mục, 16:28 EDT copy `pricing_decision.xlsx` và `final_meeting.pptx` về `S data`.
 - **Giới hạn:** ShellBags không cho biết file nào trong thư mục được mở hay sao chép; phần "mở file" dựa vào LNK.
 - **Event đã đổi sang verified trong `shellbags_findings.csv`:** CASE01-SB0031–0033, 0056–0061, 0131–0133, 0150, 0157–0159.
-- **Ảnh:** `notes/img/F001_design.png`, `notes/img/F001_pricing_decision.png`, `notes/img/F001_design_NTUSER.png`
+- **Ảnh:** `case_notes/img/F001_design.png`, `case_notes/img/F001_pricing_decision.png`, `case_notes/img/F001_design_NTUSER.png`
 
 ---
 
@@ -59,9 +61,9 @@
 - **LNK bổ trợ:** `winter_whether_advisory.zip.lnk` Created 2015-03-24 14:01:23Z (lần mở đầu, khớp ShellBag 14:01:29Z), Modified 20:44:18Z trỏ tới `D:\de\...` (xem F005).
 - **Observed:** file `winter_whether_advisory.zip` tồn tại trên E:\Secret Project Data\design và user đã mở xem bên trong (thư mục `ppt`) lúc 14:01Z ngày 24/03 (10:01 EDT).
 - **Giới hạn:** ShellBags không chứng minh nội dung zip là dữ liệu mật; tên file "winter_whether_advisory" có thể là ngụy trang – cần kiểm tra nội dung.
-- **Đối chiếu NIST (EDT+4=UTC):** 09:58 EDT cắm USB **RM#2**, 09:59 EDT copy toàn bộ `Secret Project Data` sang RM#2 (khớp Created 13:59:38Z), 10:00 EDT mở `winter_whether_advisory.zip` – NIST ghi JumpList 10:01:23 và ShellBag 10:01:29 EDT, khớp chính xác LNK 14:01:23Z và ShellBag 14:01:29Z. ⇒ Ổ E: tại thời điểm này là **RM#2**, không phải RM#1 (RM#1 cũng từng là E: lúc 13:38Z).
+- **NIST-confirmed (EDT+4=UTC):** 09:58 EDT cắm USB **RM#2**, 09:59 EDT copy toàn bộ `Secret Project Data` sang RM#2 (khớp Created 13:59:38Z), 10:00 EDT mở `winter_whether_advisory.zip` – NIST ghi JumpList 10:01:23 và ShellBag 10:01:29 EDT, khớp chính xác LNK 14:01:23Z và ShellBag 14:01:29Z. ⇒ Ổ E: tại thời điểm này là **RM#2**, không phải RM#1 (RM#1 cũng từng là E: lúc 13:38Z).
 - **Event đã verified:** CASE01-SB0001, 0171, 0254, 0266–0270.
-- **Ảnh:** `notes/img/F004_zip_E.png`
+- **Ảnh:** `case_notes/img/F004_zip_E.png`
 
 ---
 
@@ -78,8 +80,10 @@
 - **Cùng nhánh D: (CDBurn):** `tr`, `prog`, `prop`, `pd` – thấy trong cây ShellBags Explorer.
 - **LNK bổ trợ:** `winter_whether_advisory.zip.lnk` Modified 2015-03-24 20:44:18Z, target `D:\de\winter_whether_advisory.zip`, ổ quang (Optical disc), volume serial E297F1A5 – 5 giây sau Last interacted của `D:\de`.
 - **Observed:** user đưa thư mục `de` (và `tr`, `prog`, `prop`, `pd`) vào khu chờ ghi đĩa của ổ D: và mở file zip từ `D:\de` lúc 20:44Z (16:44 EDT).
-- **Inferred:** `de/pd/prog/prop/tr` = viết tắt của design / pricing decision / progress / proposal / technical review ⇒ dữ liệu mật được đổi tên rồi ghi ra CD. Cần đối chiếu nội dung đĩa (RM#3 trong dataset NIST) để xác nhận.
+- **Inferred:** `de/pd/prog/prop/tr` = viết tắt của design / pricing decision / progress / proposal / technical review ⇒ dữ liệu mật được đổi tên rồi ghi ra CD.
+- **NIST-confirmed:** 16:40 EDT (20:40Z) user đổi tên design→de, pricing decision→pd, progress→prog, proposal→prop, technical review→tr; 16:41 EDT ghi CD-R; 16:44 EDT kiểm tra nội dung đĩa (khớp LNK 20:44:18Z).
+- **Chưa giải thích:** First interacted của `D:\de` (19:54:35Z = 15:54 EDT) sớm hơn mốc đổi tên của NIST ~46 phút, rơi vào giai đoạn NIST mô tả là "tập ghi đĩa với file vô nghĩa" (15:40–16:35 EDT). Có thể thư mục `de` đã được tạo trong lần tập; NIST cũng lưu ý timestamp ShellBag có thể không chính xác.
 - **Event đã verified:** CASE01-SB0282–0284, 0309, 0330, 0331.
-- **Ảnh:** `notes/img/F005_de_CDBurn.png`
+- **Ảnh:** `case_notes/img/F005_de_CDBurn.png`
 
 ---

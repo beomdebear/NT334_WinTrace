@@ -1,10 +1,28 @@
-# CASE01 – Candidate Findings (bản nháp từ output tool, CHƯA kiểm chứng thủ công)
+# CASE01 – Findings
 
-> Nguồn: SBECmd 2026.10.2 (`output/sbecmd/20261028_103708/Deduplicated.csv`, 109 ShellBags),
+## Bảng trạng thái
+
+Ba mức kết luận: **Observed** = artifact cho thấy trực tiếp · **Inferred** = suy luận, chưa có bằng chứng trực tiếp · **NIST-confirmed** = khớp đáp án chính thức của NIST.
+"Verified (GUI)" = đã kiểm chứng thủ công bằng ShellBags Explorer, độc lập với SBECmd (chi tiết trong `manual_evidence.md`).
+
+| ID | Observed (artifact) | Inferred | NIST-confirmed | Verified (GUI) |
+|---|---|---|---|---|
+| F001 | Duyệt `Secret Project Data` trên `\\10.11.11.128\secured_drive`; mở 2 file trên share | Rà soát dữ liệu mật trước khi thu thập | ✅ kết nối share, duyệt, copy 2 file | ✅ |
+| F002 | Duyệt `V:\Secret Project Data\final`; Jump List V: + LNK trỏ share | V: là ổ mạng ánh xạ tới share | ✅ map/unmap V: 16:26–16:29 EDT | – |
+| F003 | Cây `Desktop\S data\Secret Project Data` tồn tại và được duyệt | Dữ liệu từ share/USB được tập kết trên Desktop | ✅ copy + đổi tên 20 file; xóa `S data` bằng Shift+Delete | – |
+| F004 | Duyệt `E:\...\winter_whether_advisory.zip` 14:01:29Z; LNK Created 14:01:23Z | File vừa được copy vào E: (Created > Modified); E: là USB FAT | ✅ copy sang RM#2 và mở file (khớp đến giây) | ✅ |
+| F005 | Thư mục `de/pd/prog/prop/tr` trong khu chờ ghi CD (CDBurn); mở zip từ `D:\de` | Đổi tên viết tắt dữ liệu mật rồi ghi CD | ✅ đổi tên + ghi CD-R | ✅ |
+| F006 | Duyệt thư mục Google Drive; GOOGLEDRIVESYNC chạy 15:21:31Z | Kênh rò rỉ qua cloud | ◐ dùng Google Drive 23/03, ngắt tài khoản 25/03; ❌ giả thuyết "gỡ/cài lại" bị bác bỏ | – |
+| F007 | Prefetch Eraser, CCleaner, UNINST; Recycle Bin trống | Cố tình xóa dấu vết | ✅ Eraser xóa `Desktop\temp`, empty Recycle Bin, gỡ CCleaner/iCloud | – |
+| F008 | LNK/Prefetch/Jump List thư xin nghỉ việc (.docx, .xps) | – | ✅ mở thư 11:24 EDT, in XPS 11:28 EDT | – |
+
+---
+
+
+> Nguồn: SBECmd 2026.10.2 (`tool_output/sbecmd/Deduplicated.csv`, 109 ShellBags),
 > LECmd 2026.10.3 và PECmd 2026.10.3 chạy **trực tiếp trên ổ mount read-only F:** (`output/lecmd/fromF/`, `output/pecmd/fromF/`) để giữ timestamp file system gốc.
 > Với LNK: Created ≈ lần mở đầu, Modified ≈ lần mở gần nhất. Với Prefetch (Win7): Created của .pf ≈ lần chạy đầu + ~10 giây.
-> Giờ: UTC (giờ máy nghi phạm = UTC − 4h, EDT). Tất cả finding ở trạng thái **unverified** cho đến khi Phúc kiểm tay (Ngày 6).
-> "Observed" = artifact cho thấy trực tiếp. "Inferred" = suy luận, cần artifact khác xác nhận.
+> Giờ: UTC (giờ máy nghi phạm = UTC − 4h, EDT).
 
 ---
 
@@ -21,7 +39,7 @@
 - **ShellBags:** `This PC\V:\Secret Project Data\final`
 - **Observed:** thư mục cùng tên trên ổ V: được duyệt, ngay giữa phiên duyệt share ở F001.
 - **Jump List (JLECmd):** `V:\Secret Project Data\final\[secret_project]_final_meeting.pptx` (20:27:33Z) – trong khi LNK cùng tên file trỏ tới `\\10.11.11.128\secured_drive` ⇒ V: là ổ mạng ánh xạ tới share.
-- **Đối chiếu NIST:** 16:26 EDT map V: tới `\\10.11.11.128\secured_drive`, 16:29 EDT unmap ⇒ **xác nhận**.
+- **NIST-confirmed:** 16:26 EDT map V: tới `\\10.11.11.128\secured_drive`, 16:29 EDT unmap ⇒ **xác nhận**.
 - **Confidence:** high.
 
 ## CASE01-F003 – Bản sao dữ liệu mật trên Desktop ("S data")
@@ -29,7 +47,7 @@
 - **ShellBags (UsrClass.dat):** `Desktop\S data\Secret Project Data\{Common Data, Past Projects, design, final, pricing decision, progress, proposal, technical review}` và một lớp lồng `Secret Project Data\Secret Project Data\...`.
 - **Observed:** cấu trúc thư mục giống hệt share ở F001 xuất hiện trên Desktop của user và được duyệt.
 - **Inferred:** dữ liệu đã được sao chép từ share về máy (ShellBags KHÔNG chứng minh hành vi copy).
-- **Đối chiếu NIST:** 24/03 09:40–09:56 EDT copy và đổi tên 20 file vào `S data\Secret Project Data`; **10:07 EDT xóa cả thư mục `S data` bằng Shift+Delete** ⇒ ShellBags vẫn lưu dấu thư mục đã bị xóa – minh họa giá trị của ShellBags.
+- **NIST-confirmed:** 24/03 09:40–09:56 EDT copy và đổi tên 20 file vào `S data\Secret Project Data`; **10:07 EDT xóa cả thư mục `S data` bằng Shift+Delete** ⇒ ShellBags vẫn lưu dấu thư mục đã bị xóa – minh họa giá trị của ShellBags.
 - **Confidence:** medium.
 
 ## CASE01-F004 – Dữ liệu mật trên thiết bị lưu trữ ngoài (E:)
@@ -38,9 +56,9 @@
 - **LNK `winter_whether_advisory.zip.lnk`:** Created 2015-03-24 14:01:23Z (khớp ShellBag `E:\Secret Project Data\design\winter_whether_advisory.zip` 14:01:29Z) – lần mở đầu tiên là trên E:.
 - **Observed:** cấu trúc "Secret Project Data" tồn tại trên E: và được duyệt; 2 file trên E: được mở qua Shell.
 - **Inferred:** E: là thiết bị ngoài (USB) dùng để chứa/chuyển dữ liệu mật. Cần đối chiếu serial 5C754D3E với SYSTEM `Enum\USBSTOR`, SOFTWARE `Windows Portable Devices` / `EMDMgmt`. Lưu ý: LNK ghi DriveType "Fixed" – một số USB tự báo là ổ cố định.
-- **Đối chiếu NIST (EDT+4=UTC):** RM#1 được cắm 2 lần: 23/03 14:31 EDT (mở file 14:37–14:39 EDT = 18:37–18:39Z, khớp LNK) và 24/03 09:38 EDT (=13:38Z, khớp ShellBag `E:\RM#1`). Lúc 09:58 EDT (13:58Z) một USB **khác – RM#2** – được cắm, cũng nhận ký tự **E:**; `E:\Secret Project Data\...` lúc 14:00–14:01Z là **RM#2**.
+- **NIST-confirmed (EDT+4=UTC):** RM#1 được cắm 2 lần: 23/03 14:31 EDT (mở file 14:37–14:39 EDT = 18:37–18:39Z, khớp LNK) và 24/03 09:38 EDT (=13:38Z, khớp ShellBag `E:\RM#1`). Lúc 09:58 EDT (13:58Z) một USB **khác – RM#2** – được cắm, cũng nhận ký tự **E:**; `E:\Secret Project Data\...` lúc 14:00–14:01Z là **RM#2**.
 - **Bài học:** cùng ký tự ổ E: nhưng là 2 thiết bị khác nhau ⇒ ShellBags/LNK chỉ ghi ký tự ổ, phải dùng volume serial / USBSTOR để phân biệt thiết bị.
-- **Confidence:** medium.
+- **Confidence:** high (ShellBags + LNK + Target timestamps; NIST-confirmed).
 
 ## CASE01-F005 – Chuẩn bị ghi đĩa CD (CD Burning) với tên thư mục viết tắt
 - **Thời gian:** 2015-03-24 19:54:35Z → 20:44:18Z (15:54–16:44 EDT)
@@ -48,15 +66,15 @@
 - **LNK:** cùng file `winter_whether_advisory.zip.lnk`, Modified 20:44:18Z, nay trỏ tới `D:\de\winter_whether_advisory.zip` – Optical disc, serial **E297F1A5**. Cùng tên file nên Windows cập nhật lại một LNK: lần mở đầu trên E: (14:01Z), lần mở cuối từ đĩa CD (20:44Z) ⇒ file đã đi từ USB sang CD.
 - `CD Drive.lnk`: Created 20:47:22Z, serial A58AD72A.
 - **Observed:** thư mục được đưa vào khu vực chờ ghi đĩa của ổ quang D:.
-- **Inferred → XÁC NHẬN bởi NIST:** 16:40 EDT (20:40Z) user đổi tên design→de, pricing decision→pd, progress→prog, proposal→prop, technical review→tr rồi ghi CD-R; 16:44 EDT kiểm tra nội dung đĩa (khớp LNK 20:44:18Z).
+- **NIST-confirmed:** 16:40 EDT (20:40Z) user đổi tên design→de, pricing decision→pd, progress→prog, proposal→prop, technical review→tr rồi ghi CD-R; 16:44 EDT kiểm tra nội dung đĩa (khớp LNK 20:44:18Z).
 - **Điểm lệch:** ShellBag `D:\de` First interacted 19:54:35Z (15:54 EDT) sớm hơn mốc đổi tên của NIST (16:40 EDT); NIST ghi 15:40–16:35 EDT là giai đoạn "tập ghi đĩa" với file vô nghĩa. Cần giải thích – NIST cũng lưu ý timestamp ShellBag có thể không chính xác.
 - **Ghi chú:** 21:01Z cùng ngày, ổ D: là một đĩa khác (serial AE88F176) chứa Penguins.jpg, Koala.jpg, Tulips.jpg (ảnh mẫu Windows) – có thể là đĩa "mồi".
-- **Confidence:** medium (suy luận đổi tên cần thêm bằng chứng).
+- **Confidence:** high (NIST-confirmed phần đổi tên).
 
 ## CASE01-F006 – Thư mục Google Drive
 - **ShellBags:** `Users Files\Google Drive` – FirstInteracted 2015-03-23 20:05:34Z, LastInteracted 2015-03-25 15:20:59Z.
 - **Prefetch:** GOOGLEDRIVESYNC.EXE run count 2, LastRun 2015-03-25 15:21:31Z; file .pf Created 15:21:40Z.
-- **Đối chiếu NIST:** 11:22 EDT (15:22Z) ngày 25/03 user mở Google Drive để ngắt kết nối tài khoản và đăng xuất ⇒ khớp LastRun.
+- **NIST-confirmed:** 11:22 EDT (15:22Z) ngày 25/03 user mở Google Drive để ngắt kết nối tài khoản và đăng xuất ⇒ khớp LastRun.
 - **Điểm chưa giải thích:** Google Drive đã dùng từ 23/03 (ShellBag 20:05Z) nhưng .pf chỉ được tạo 25/03 15:21:40Z. Giả thuyết ban đầu "gỡ/cài lại Google Drive" **bị bác bỏ** (NIST: lần gỡ lúc 15:18Z là CCleaner và iCloud). Nguyên nhân .pf mới còn để mở – ghi vào Hạn chế.
 - **Observed:** Google Drive được cài/chạy và thư mục đồng bộ được duyệt.
 - **Inferred:** kênh rò rỉ qua cloud có thể đã được dùng – cần xem nội dung thư mục, log sync.
@@ -73,7 +91,7 @@
 - **ShellBags:** `Desktop\Recycle Bin` FirstInteracted 2015-03-25 14:14:17Z; `Programs and Features` 15:19:20Z (cùng lúc UNINST.EXE / MSIEXEC – theo NIST là gỡ CCleaner và iCloud).
 - **RBCmd:** thùng rác hiện không có $I nào.
 - **ShellBags liên quan:** `Desktop\temp` (FirstInteracted 2015-03-24 19:52:13Z).
-- **Đối chiếu NIST (EDT → UTC):** 11:13 EDT dùng Eraser xóa `Desktop\temp` (khớp ERASER.EXE LastRun 15:13:30Z); 11:14 EDT dọn Recycle Bin; 11:15 EDT mở CCleaner nhưng không làm gì (khớp 15:15:50Z); 11:18 EDT gỡ CCleaner và iCloud (khớp UNINST.EXE 15:18:29Z).
+- **NIST-confirmed (EDT → UTC):** 11:13 EDT dùng Eraser xóa `Desktop\temp` (khớp ERASER.EXE LastRun 15:13:30Z); 11:14 EDT dọn Recycle Bin; 11:15 EDT mở CCleaner nhưng không làm gì (khớp 15:15:50Z); 11:18 EDT gỡ CCleaner và iCloud (khớp UNINST.EXE 15:18:29Z).
 - **Observed:** Eraser và CCleaner được cài và thực thi; thùng rác trống; thư mục Desktop\temp từng tồn tại.
 - **Inferred:** user cố tình xóa dữ liệu/dấu vết trước khi nghỉ việc. Prefetch không cho biết Eraser xóa file nào.
 - **Confidence:** high cho "đã thực thi"; medium cho mục đích.
