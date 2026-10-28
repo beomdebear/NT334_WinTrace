@@ -58,28 +58,34 @@ def main():
     if not files:
         raise SystemExit(f"Không thấy CSV trong {args.input_dir}")
 
-    rows, seen, skipped = [], set(), 0
+    rows, seen, merged, no_ts = [], {}, 0, []
     for path in files:
         with open(path, newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for line_no, r in enumerate(reader, start=2):  # dòng 1 là header
                 obj = (r.get("AbsolutePath") or r.get("Value") or "").strip()
-                hive = (r.get("SourceFile") or os.path.basename(path)).strip()
+                # chỉ giữ tên hive, không lộ đường dẫn máy phân tích
+                hive = os.path.basename((r.get("SourceFile") or path).strip().replace("\\", "/"))
                 bag = (r.get("BagPath") or "").strip()
                 mru = (r.get("MRUPosition") or r.get("MruPosition") or "").strip()
+                src_ref = f"{os.path.basename(path)}:L{line_no}"
+                produced = False
                 for col, (ts_type, desc, conf) in TS_COLUMNS.items():
                     ts = to_iso_utc(r.get(col))
                     if not ts:
                         continue
+                    produced = True
                     key = (ts, ts_type, obj, bag)
                     if key in seen:
-                        skipped += 1
+                        # cùng path, cùng BagPath, cùng mốc: không tạo event mới (giữ event_id ổn định)
+                        # nhưng ghi thêm dòng nguồn để không mất tham chiếu
+                        seen[key]["evidence_reference"] += f" | also={src_ref} (MRU={mru}, Slot={r.get('Slot','')})"
+                        merged += 1
                         continue
-                    seen.add(key)
                     if col == "LastWriteTime" and mru == "0":
                         conf = "medium"
-                    ref = f"{os.path.basename(path)}:L{line_no} | hive={hive} | BagPath={bag} | MRU={mru} | ShellType={r.get('ShellType','')}"
-                    rows.append({
+                    ref = f"{src_ref} | hive={hive} | BagPath={bag} | Slot={r.get('Slot','')} | MRU={mru} | ShellType={r.get('ShellType','')}"
+                    ev = {
                         "timestamp_utc": ts,
                         "timestamp_type": ts_type,
                         "artifact_type": "ShellBags",
@@ -89,8 +95,13 @@ def main():
                         "evidence_reference": ref,
                         "confidence": conf,
                         "validation_status": "unverified",
-                    })
+                    }
+                    seen[key] = ev
+                    rows.append(ev)
+                if not produced:
+                    no_ts.append(f"{src_ref} {obj}")
 
+    # sort ổn định (timestamp, rồi thứ tự đọc) để event_id tái lập được giữa các lần chạy
     rows.sort(key=lambda x: x["timestamp_utc"])
     for i, r in enumerate(rows, start=1):
         r["event_id"] = f"{args.case}-SB{i:04d}"
@@ -100,7 +111,11 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
-    print(f"Đọc {len(files)} file CSV -> {len(rows)} event (bỏ {skipped} trùng) -> {args.output}")
+    print(f"Đọc {len(files)} file CSV -> {len(rows)} event; {merged} mốc trùng được ghép tham chiếu (also=) -> {args.output}")
+    if no_ts:
+        print(f"CẢNH BÁO: {len(no_ts)} ShellBag không có timestamp nào, không tạo event:")
+        for x in no_ts:
+            print("   ", x)
 
 
 if __name__ == "__main__":

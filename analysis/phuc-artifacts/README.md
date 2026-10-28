@@ -18,7 +18,8 @@ Phân tích ShellBags, LNK, Jump Lists, Prefetch, Recycle Bin trên dataset **NI
 | `shellbags_findings.csv` | 383 event ShellBags theo schema mục 13.1 của đề (30 verified) |
 | `../../results/case01_shellbags_events.csv` | Cùng 383 event, theo **schema chung của nhóm** (`docs/event_schema.md`) – đã kiểm hợp lệ với `src/schema.py::ForensicEvent` |
 | `scripts/` | Script thu thập và chuyển đổi (xem dưới) |
-| `case_notes/` | Timezone, phiên bản tool, ảnh kiểm chứng (`case_notes/img/`) |
+| `case_notes/` | Timezone, integrity (hash), phiên bản tool, log thu thập & lệnh, **7 ảnh kiểm chứng** (`case_notes/img/`) |
+| `tool_output/sbecmd/Deduplicated.csv` | Output gốc SBECmd – đích của cột `evidence_reference` (`Deduplicated.csv:L<n>`) |
 
 ## Scripts
 
@@ -31,5 +32,6 @@ Phân tích ShellBags, LNK, Jump Lists, Prefetch, Recycle Bin trên dataset **NI
 | `to_team_schema.py shellbags_findings.csv -o case01_shellbags_events.csv --username informant` | Chuyển sang schema chung của nhóm, giữ `event_id` và `validation_status` |
 
 ## Ghi chú
-- Đường dẫn `notes/...`, `output/...` trong các báo cáo là thư mục case cục bộ (không nằm trong repo). Ảnh kiểm chứng lưu ở `case_notes/img/` (không dùng tên `evidence/` vì `.gitignore` của nhóm chặn mọi thư mục `evidence/`).
+- Ảnh và ghi chú lưu ở `case_notes/` (không dùng tên `evidence/` vì `.gitignore` của nhóm chặn mọi thư mục `evidence/`). Output LNK/Prefetch/Jump List không đưa lên vì chứa đường dẫn đầy đủ của artifact; tái tạo bằng `scripts/day3_4_run_tools.ps1`.
+- Ba mức kết luận: **Observed** · **Inferred** · **NIST-confirmed**; "Verified (GUI)" = kiểm chứng bằng ShellBags Explorer.
 - Kết quả tuần 1: 3 finding verified bằng GUI độc lập (F001, F004, F005); 19/26 hành động trong đáp án NIST có artifact khớp.
