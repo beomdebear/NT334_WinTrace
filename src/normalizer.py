@@ -1,7 +1,13 @@
 """
-WinTrace - Plaso Data Normalization Module
+WinTrace - Plaso Data Normalization Module (v2)
 Transforms raw Plaso output (CSV / JSON Lines) into standardized ForensicEvent records
 matching docs/event_schema.md.
+
+Changelog (Week 2):
+- PlasoNormalizer now populates timestamp_type, evidence_reference, validation_status, case_id
+- Added ShellBagsNormalizer to import ShellBags CSV (from Phúc's to_team_schema.py output)
+- Added map_plaso_timestamp_type() for Plaso timestamp_desc → timestamp_type mapping
+- Malformed records are counted and logged, not silently dropped
 """
 
 from datetime import datetime, timezone
@@ -12,6 +18,40 @@ import json
 import re
 
 from src.schema import ForensicEvent, normalize_windows_path, parse_iso_utc
+
+
+# Mapping from Plaso timestamp_desc values to WinTrace timestamp_type codes
+PLASO_TIMESTAMP_TYPE_MAP = {
+    # Prefetch
+    "Last Time Executed": "Prefetch_LastRun",
+    "Previous Last Time Executed": "Prefetch_PreviousRun",
+    # LNK
+    "File Last Modification Time": "LNK_TargetModified",
+    "File Creation Time": "LNK_TargetCreated",
+    "File Last Access Time": "LNK_TargetAccessed",
+    # EVTX
+    "Event Generated Time": "EVTX_EventGenerated",
+    "Creation Time": "EVTX_EventGenerated",
+    # RecycleBin
+    "File Deletion Time": "RecycleBin_DeletionTime",
+    # ShellBags (via Plaso winreg parser)
+    "Last Time Visited": "ShellBag_LastInteracted",
+    # NTFS / MFT
+    "Content Modification Time": "NTFS_SI_Modified",
+    "File Created Time": "NTFS_SI_Created",
+    "Last Access Time": "NTFS_SI_Accessed",
+    "Entry Modification Time": "NTFS_SI_EntryModified",
+}
+
+# Mapping from ShellBags timestamp_type (from Phúc's sbecmd_to_findings.py)
+SHELLBAGS_TIMESTAMP_DESC_MAP = {
+    "ShellBag_LastInteracted": "BagMRU Last Interacted",
+    "ShellBag_FirstInteracted": "BagMRU First Interacted",
+    "ShellBag_KeyLastWrite": "BagMRU Key Last Write",
+    "ShellItem_FolderCreated": "ShellItem Target Created",
+    "ShellItem_FolderModified": "ShellItem Target Modified",
+    "ShellItem_FolderAccessed": "ShellItem Target Accessed",
+}
 
 
 class PlasoNormalizer:
@@ -33,6 +73,16 @@ class PlasoNormalizer:
             return "EVTX"
         if "mft" in combined or "ntfs" in combined:
             return "NTFS_MFT"
+        if "jump_list" in combined or "automaticdestinations" in combined:
+            return "JumpLists"
+        return "Generic"
+
+    @staticmethod
+    def map_timestamp_type(timestamp_desc: str, artifact_source: str) -> str:
+        """Map Plaso timestamp_desc to WinTrace timestamp_type code."""
+        mapped = PLASO_TIMESTAMP_TYPE_MAP.get(timestamp_desc)
+        if mapped:
+            return mapped
         return "Generic"
 
     @staticmethod
@@ -40,12 +90,12 @@ class PlasoNormalizer:
         """Extract referenced target object path from raw Plaso message or display name."""
         # Check for explicit "Path: ..." or "[C:\...]" patterns
         path_patterns = [
-            r"Path:\s*([a-zA-Z]:\\[^\s,\]]+)",
+            r"Path:\s*([a-zA-Z]:\\[^,\]\r\n]+?)(?=\s+[A-Za-z]+(?:\s+[A-Za-z]+)?:|\s*$|\]|\r|\n)",
             r"\[([a-zA-Z]:\\[^\]]+)\]",
-            r"Object Name:\s*([a-zA-Z]:\\[^\s,]+)",
-            r"Deleted file:\s*([a-zA-Z]:\\[^\s,]+)",
-            r"New Process Name:\s*([a-zA-Z]:\\[^\s,]+)",
-            r"([a-zA-Z]:\\[A-Za-z0-9_\-\.\\]+)"
+            r"Object Name:\s*([a-zA-Z]:\\[^,\]\r\n]+?)(?=\s+[A-Za-z]+(?:\s+[A-Za-z]+)?:|\s*$|\]|\r|\n)",
+            r"Deleted file:\s*([a-zA-Z]:\\[^,\]\r\n]+?)(?=\s+[A-Za-z]+(?:\s+[A-Za-z]+)?:|\s*$|\]|\r|\n)",
+            r"New Process Name:\s*([a-zA-Z]:\\[^,\]\r\n]+?)(?=\s+[A-Za-z]+(?:\s+[A-Za-z]+)?:|\s*$|\]|\r|\n)",
+            r"([a-zA-Z]:\\[A-Za-z0-9_\-\.\\ ]+)"
         ]
         for pattern in path_patterns:
             match = re.search(pattern, message, re.IGNORECASE)
@@ -59,7 +109,7 @@ class PlasoNormalizer:
         return ""
 
     @staticmethod
-    def extract_user_info(message: str, display_name: str) -> tuple[Optional[str], Optional[str]]:
+    def extract_user_info(message: str, display_name: str) -> tuple:
         """Extract username and User SID from event messages and path hints."""
         username = None
         user_sid = None
@@ -121,7 +171,8 @@ class PlasoNormalizer:
         return extra
 
     @classmethod
-    def normalize_record(cls, raw_row: Dict[str, str], index: int) -> ForensicEvent:
+    def normalize_record(cls, raw_row: Dict[str, str], index: int,
+                         case_id: Optional[str] = None) -> ForensicEvent:
         """Convert a single raw Plaso row into a standardized ForensicEvent."""
         event_id = f"EVT-{index:04d}"
 
@@ -142,6 +193,12 @@ class PlasoNormalizer:
         username, user_sid = cls.extract_user_info(message, display_name)
         extra_attrs = cls.extract_extra_attributes(message, artifact_source)
 
+        # Week 2: Map timestamp_type
+        timestamp_type = cls.map_timestamp_type(timestamp_desc, artifact_source)
+
+        # Week 2: Build evidence_reference from Plaso source info
+        evidence_reference = f"plaso:{parser} | display_name={display_name}" if display_name else None
+
         return ForensicEvent(
             event_id=event_id,
             timestamp=iso_timestamp,
@@ -155,26 +212,133 @@ class PlasoNormalizer:
             user_sid=user_sid,
             username=username,
             confidence_level="HIGH" if artifact_source != "Generic" else "MEDIUM",
-            extra_attributes=extra_attrs
+            extra_attributes=extra_attrs,
+            timestamp_type=timestamp_type,
+            evidence_reference=evidence_reference,
+            validation_status="unverified",
+            case_id=case_id,
         )
 
     @classmethod
-    def normalize_file(cls, input_path: str) -> List[ForensicEvent]:
-        """Read a raw Plaso CSV file and normalize all records."""
+    def normalize_file(cls, input_path: str, case_id: Optional[str] = None) -> List[ForensicEvent]:
+        """Read a raw Plaso CSV file and normalize all records.
+
+        Returns a list of successfully normalized ForensicEvent objects.
+        Malformed records are skipped with a warning printed to stdout.
+        """
         path = Path(input_path)
         if not path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         events: List[ForensicEvent] = []
+        skipped = 0
         with open(path, "r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             idx = 1
             for row in reader:
                 try:
-                    event = cls.normalize_record(row, idx)
+                    event = cls.normalize_record(row, idx, case_id=case_id)
                     events.append(event)
                     idx += 1
                 except Exception as e:
                     # Skip malformed lines while reporting
+                    skipped += 1
                     print(f"Warning: Skipping line {idx} due to error: {e}")
+        if skipped > 0:
+            print(f"Total skipped records: {skipped}")
         return events
+
+
+class ShellBagsNormalizer:
+    """Normalizes ShellBags CSV (output of Phúc's to_team_schema.py or
+    case01_shellbags_events.csv) into ForensicEvent objects.
+
+    This adapter handles the differences between ShellBags event format
+    and the main Plaso pipeline format, specifically:
+    - Extracts evidence_reference and validation_status from extra_attributes JSON
+    - Maps timestamp_type from extra_attributes
+    - Preserves BagMRU paths in target_path while also extracting drive paths
+    """
+
+    @classmethod
+    def normalize_file(cls, input_path: str) -> List[ForensicEvent]:
+        """Load ShellBags events from a team-schema CSV file.
+
+        Expects columns matching the ForensicEvent schema:
+            event_id, timestamp, timestamp_desc, artifact_source, source_file,
+            target_path, message, data_type, parser, user_sid, username,
+            confidence_level, extra_attributes
+
+        The extra_attributes column should contain a JSON string with keys:
+            timestamp_type, evidence_reference, validation_status
+        """
+        path = Path(input_path)
+        if not path.exists():
+            raise FileNotFoundError(f"ShellBags CSV not found: {input_path}")
+
+        events: List[ForensicEvent] = []
+        skipped = 0
+
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            for line_no, row in enumerate(reader, start=2):
+                try:
+                    event = cls._normalize_row(row)
+                    events.append(event)
+                except Exception as e:
+                    skipped += 1
+                    print(f"Warning: Skipping ShellBags line {line_no}: {e}")
+
+        if skipped > 0:
+            print(f"Total skipped ShellBags records: {skipped}")
+        return events
+
+    @classmethod
+    def _normalize_row(cls, row: Dict[str, str]) -> ForensicEvent:
+        """Convert a single ShellBags CSV row to ForensicEvent."""
+        # Parse extra_attributes JSON to extract embedded fields
+        extra_raw = row.get("extra_attributes", "")
+        extra_dict: Dict[str, Any] = {}
+        timestamp_type = None
+        evidence_reference = None
+        validation_status = None
+
+        if extra_raw and extra_raw.strip():
+            try:
+                extra_dict = json.loads(extra_raw)
+                timestamp_type = extra_dict.pop("timestamp_type", None)
+                evidence_reference = extra_dict.pop("evidence_reference", None)
+                validation_status = extra_dict.pop("validation_status", None)
+            except json.JSONDecodeError:
+                pass  # extra_attributes stays empty
+
+        # Determine case_id from event_id prefix
+        event_id = row.get("event_id", "")
+        case_id = None
+        if event_id.startswith("CASE01"):
+            case_id = "CASE01"
+
+        # Parse timestamp
+        raw_time = row.get("timestamp", "")
+        dt = parse_iso_utc(raw_time)
+        iso_timestamp = dt.isoformat()
+
+        return ForensicEvent(
+            event_id=event_id,
+            timestamp=iso_timestamp,
+            timestamp_desc=row.get("timestamp_desc", "Unknown"),
+            artifact_source=row.get("artifact_source", "ShellBags"),
+            source_file=row.get("source_file", ""),
+            target_path=row.get("target_path", ""),
+            message=row.get("message", ""),
+            data_type=row.get("data_type", "windows:registry:bagmru"),
+            parser=row.get("parser", "sbecmd"),
+            user_sid=row.get("user_sid") or None,
+            username=row.get("username") or None,
+            confidence_level=row.get("confidence_level", "MEDIUM"),
+            extra_attributes=extra_dict,
+            timestamp_type=timestamp_type,
+            evidence_reference=evidence_reference,
+            validation_status=validation_status,
+            case_id=case_id,
+        )
