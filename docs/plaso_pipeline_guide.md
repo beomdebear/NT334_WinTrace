@@ -129,3 +129,46 @@ psort.py -o json_line -w results/plaso_raw_output.jsonl storage.plaso
 3. `target_path`: Làm sạch, thay dấu `/` thành `\` và chuẩn hóa đường dẫn Windows.
 4. `message`: Làm sạch các ký tự xuống dòng thừa, định dạng lại thông tin quan trọng.
 5. `extra_attributes`: Đóng gói các thuộc tính riêng (VD: `run_count`, `volume_serial`, `access_mask`).
+
+## 6. Automation và SQLite trong Tuần 2
+
+`src/plaso_runner.py` cung cấp wrapper subprocess cho `log2timeline.py` và
+`psort.py`. Wrapper không che giấu lỗi: command khác 0 sẽ dừng pipeline bằng
+`PlasoCommandError` và ghi stdout/stderr vào log JSONL nếu truyền `log_path`.
+
+Ví dụ chạy từ Python:
+
+```python
+from src.plaso_runner import PlasoRunner
+
+runner = PlasoRunner()
+runner.run_log2timeline(
+    source="case01/evidence",
+    storage_file="results/case01.plaso",
+    parsers="winreg,prefetch,lnk,winevtx,recycle_bin",
+    log_path="results/pipeline_execution_log.jsonl",
+)
+runner.run_psort(
+    storage_file="results/case01.plaso",
+    output_file="results/case01_plaso.csv",
+    output_format="dynamic",
+    log_path="results/pipeline_execution_log.jsonl",
+)
+```
+
+Sau khi có CSV Plaso và output ShellBags theo schema chung, pipeline có thể
+nhập cả hai nguồn vào SQLite:
+
+```powershell
+python src\pipeline.py `
+  --input results\case01_plaso.csv `
+  --shellbags results\case01_shellbags_events.csv `
+  --output results\case01_normalized.json `
+  --database results\case01_timeline.db `
+  --error-log results\case01_normalization_errors.json
+```
+
+`src/storage.py` lưu toàn bộ trường schema, bảo toàn `extra_attributes` (bao
+gồm `evidence_reference`), tạo index cho timestamp/artifact/path/user và dùng
+fingerprint để import lại pipeline mà không nhân bản event. Các record lỗi
+được giữ trong error log thay vì bị bỏ qua im lặng.
