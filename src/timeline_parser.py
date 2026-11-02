@@ -1,7 +1,11 @@
 """
-WinTrace - Timeline Parser & Targeted Filtering Module
+WinTrace - Timeline Parser & Targeted Filtering Module (v2)
 Parses Plaso psort output (CSV / JSON) into standardized ForensicEvent objects
 and provides forensic targeted filtering.
+
+Changelog (Week 2):
+- Load/export now includes timestamp_type, evidence_reference, validation_status, case_id
+- filter_by_validation_status() and filter_by_case_id() added
 """
 
 from datetime import datetime, timezone
@@ -28,6 +32,8 @@ def map_plaso_source_to_artifact(source: str, source_long: str, data_type: str) 
         return "EVTX"
     if "mft" in s or "ntfs" in s:
         return "NTFS_MFT"
+    if "jump_list" in s or "automaticdestinations" in s:
+        return "JumpLists"
     return "Generic"
 
 
@@ -81,9 +87,24 @@ class TimelineParser:
                 message = row.get("message", row.get("desc", ""))
                 data_type = row.get("data_type", "windows:timeline:event")
                 parser = row.get("parser", "plaso")
-                user_sid = row.get("user_sid")
-                username = row.get("username")
+                user_sid = row.get("user_sid") or None
+                username = row.get("username") or None
                 confidence = row.get("confidence_level", "MEDIUM")
+
+                # Week 2: New fields
+                timestamp_type = row.get("timestamp_type") or None
+                evidence_reference = row.get("evidence_reference") or None
+                validation_status = row.get("validation_status") or None
+                case_id = row.get("case_id") or None
+
+                # Handle extra_attributes if present
+                extra_attributes = {}
+                extra_raw = row.get("extra_attributes", "")
+                if extra_raw and extra_raw.strip():
+                    try:
+                        extra_attributes = json.loads(extra_raw)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
 
                 events.append(ForensicEvent(
                     event_id=event_id,
@@ -97,7 +118,12 @@ class TimelineParser:
                     parser=parser,
                     user_sid=user_sid,
                     username=username,
-                    confidence_level=confidence
+                    confidence_level=confidence,
+                    extra_attributes=extra_attributes,
+                    timestamp_type=timestamp_type,
+                    evidence_reference=evidence_reference,
+                    validation_status=validation_status,
+                    case_id=case_id,
                 ))
                 idx += 1
         return events
@@ -116,9 +142,11 @@ class TimelineParser:
         if not events:
             return
         fieldnames = [
-            "event_id", "timestamp", "timestamp_desc", "artifact_source",
-            "source_file", "target_path", "message", "data_type",
-            "parser", "user_sid", "username", "confidence_level"
+            "event_id", "timestamp", "timestamp_desc", "timestamp_type",
+            "artifact_source", "source_file", "target_path",
+            "evidence_reference", "message", "data_type", "parser",
+            "user_sid", "username", "confidence_level",
+            "validation_status", "case_id",
         ]
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8", newline="") as f:
@@ -179,3 +207,26 @@ class TargetedFilter:
             elif user_sid and e.user_sid and user_sid.lower() == e.user_sid.lower():
                 result.append(e)
         return result
+
+    @staticmethod
+    def filter_by_validation_status(
+        events: List[ForensicEvent],
+        statuses: List[str]
+    ) -> List[ForensicEvent]:
+        """Filter events by validation status (verified, unverified, synthetic, disputed)."""
+        status_set = {s.lower() for s in statuses}
+        return [
+            e for e in events
+            if (e.validation_status or "unverified").lower() in status_set
+        ]
+
+    @staticmethod
+    def filter_by_case_id(
+        events: List[ForensicEvent],
+        case_id: str
+    ) -> List[ForensicEvent]:
+        """Filter events by case identifier."""
+        return [
+            e for e in events
+            if e.case_id and e.case_id.lower() == case_id.lower()
+        ]
