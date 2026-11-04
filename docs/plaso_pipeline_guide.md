@@ -172,3 +172,9 @@ python src\pipeline.py `
 gồm `evidence_reference`), tạo index cho timestamp/artifact/path/user và dùng
 fingerprint để import lại pipeline mà không nhân bản event. Các record lỗi
 được giữ trong error log thay vì bị bỏ qua im lặng.
+
+Lưu ý về provenance: `results/plaso_raw_output_real.*` là output
+`filestat` của scenario thử nghiệm Alice, không phải timeline CASE01. Không
+được dùng output đó để kết luận đã chạy Plaso trên CASE01. CASE01 hiện được
+import từ artifact output thực tế, ví dụ
+`analysis/phuc-artifacts/shellbags_findings.csv`, theo adapter Schema v2.

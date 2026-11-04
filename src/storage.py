@@ -26,26 +26,47 @@ class TimelineStore:
         self.connection.executescript("""
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY,
+                schema_version TEXT NOT NULL DEFAULT 'v2',
                 event_id TEXT NOT NULL,
                 fingerprint TEXT NOT NULL UNIQUE,
                 timestamp TEXT NOT NULL,
+                timestamp_type TEXT,
                 timestamp_desc TEXT NOT NULL,
                 artifact_source TEXT NOT NULL,
+                artifact_type TEXT NOT NULL,
                 source_file TEXT NOT NULL,
                 target_path TEXT NOT NULL,
+                object_path TEXT NOT NULL,
                 message TEXT NOT NULL,
                 data_type TEXT NOT NULL,
                 parser TEXT NOT NULL,
                 user_sid TEXT,
                 username TEXT,
                 confidence_level TEXT NOT NULL,
+                evidence_reference TEXT,
+                validation_status TEXT,
                 extra_attributes TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
             CREATE INDEX IF NOT EXISTS idx_events_artifact ON events(artifact_source);
             CREATE INDEX IF NOT EXISTS idx_events_target ON events(target_path);
             CREATE INDEX IF NOT EXISTS idx_events_username ON events(username);
+            CREATE INDEX IF NOT EXISTS idx_events_validation ON events(validation_status);
         """)
+        columns = {
+            row["name"] for row in self.connection.execute("PRAGMA table_info(events)")
+        }
+        migrations = {
+            "schema_version": "TEXT NOT NULL DEFAULT 'v2'",
+            "timestamp_type": "TEXT",
+            "artifact_type": "TEXT NOT NULL DEFAULT ''",
+            "object_path": "TEXT NOT NULL DEFAULT ''",
+            "evidence_reference": "TEXT",
+            "validation_status": "TEXT",
+        }
+        for name, definition in migrations.items():
+            if name not in columns:
+                self.connection.execute(f"ALTER TABLE events ADD COLUMN {name} {definition}")
         self.connection.commit()
 
     @staticmethod
@@ -63,19 +84,25 @@ class TimelineStore:
         rows = []
         for event in events:
             rows.append((
-                event.event_id, self.fingerprint(event), event.timestamp,
-                event.timestamp_desc, event.artifact_source, event.source_file,
-                event.target_path, event.message, event.data_type, event.parser,
-                event.user_sid, event.username, event.confidence_level,
+                "v2", event.event_id, self.fingerprint(event), event.timestamp,
+                event.extra_attributes.get("timestamp_type"),
+                event.timestamp_desc, event.artifact_source, event.artifact_source,
+                event.source_file, event.target_path, event.target_path,
+                event.message, event.data_type, event.parser, event.user_sid,
+                event.username, event.confidence_level,
+                event.extra_attributes.get("evidence_reference"),
+                event.extra_attributes.get("validation_status"),
                 json.dumps(event.extra_attributes, ensure_ascii=False, sort_keys=True),
             ))
         before = self.connection.total_changes
         self.connection.executemany("""
             INSERT OR IGNORE INTO events (
-                event_id, fingerprint, timestamp, timestamp_desc, artifact_source,
-                source_file, target_path, message, data_type, parser, user_sid,
-                username, confidence_level, extra_attributes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                schema_version, event_id, fingerprint, timestamp, timestamp_type,
+                timestamp_desc, artifact_source, artifact_type, source_file,
+                target_path, object_path, message, data_type, parser, user_sid,
+                username, confidence_level, evidence_reference, validation_status,
+                extra_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, rows)
         self.connection.commit()
         return self.connection.total_changes - before
@@ -119,6 +146,12 @@ class TimelineStore:
         data = dict(row)
         data.pop("id")
         data.pop("fingerprint")
+        data.pop("schema_version")
+        data.pop("timestamp_type")
+        data.pop("artifact_type")
+        data.pop("object_path")
+        data.pop("evidence_reference")
+        data.pop("validation_status")
         data["extra_attributes"] = json.loads(data["extra_attributes"])
         return ForensicEvent(**data)
 

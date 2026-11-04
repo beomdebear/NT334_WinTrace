@@ -128,20 +128,35 @@ class PlasoNormalizer:
         event_id = raw_row.get("event_id") or f"EVT-{index:04d}"
 
         # Parse timestamp
-        raw_time = raw_row.get("datetime") or raw_row.get("timestamp") or ""
+        raw_time = (
+            raw_row.get("datetime")
+            or raw_row.get("timestamp")
+            or raw_row.get("timestamp_utc")
+            or ""
+        )
         dt = parse_iso_utc(raw_time)
         iso_timestamp = dt.isoformat()
 
-        timestamp_desc = raw_row.get("timestamp_desc", "Unknown")
+        timestamp_desc = (
+            raw_row.get("timestamp_desc")
+            or raw_row.get("timestamp_type")
+            or "Unknown"
+        )
         parser = raw_row.get("parser", "generic")
         source = raw_row.get("source", "")
         source_long = raw_row.get("source_long", "")
-        message = raw_row.get("message", "").strip()
-        display_name = raw_row.get("display_name", "")
+        message = (raw_row.get("message") or raw_row.get("description") or "").strip()
+        display_name = raw_row.get("display_name") or raw_row.get("source_file", "")
+        artifact_hint = raw_row.get("artifact_source") or raw_row.get("artifact_type", "")
+        target_hint = raw_row.get("target_path") or raw_row.get("object_path", "")
 
-        artifact_source = cls.detect_artifact_source(parser, source, source_long, message)
-        target_path = cls.extract_windows_path(message, display_name)
+        artifact_source = artifact_hint or cls.detect_artifact_source(
+            parser, source, source_long, message
+        )
+        target_path = target_hint or cls.extract_windows_path(message, display_name)
         username, user_sid = cls.extract_user_info(message, display_name)
+        username = raw_row.get("username") or username
+        user_sid = raw_row.get("user_sid") or user_sid
         extra_attrs = cls.extract_extra_attributes(message, artifact_source)
         raw_extra = raw_row.get("extra_attributes")
         if raw_extra:
@@ -152,6 +167,9 @@ class PlasoNormalizer:
             if not isinstance(parsed_extra, dict):
                 raise ValueError("extra_attributes must contain a JSON object")
             extra_attrs = {**parsed_extra, **extra_attrs}
+        for field in ("timestamp_type", "evidence_reference", "validation_status"):
+            if raw_row.get(field):
+                extra_attrs.setdefault(field, raw_row[field])
 
         return ForensicEvent(
             event_id=event_id,
@@ -161,11 +179,15 @@ class PlasoNormalizer:
             source_file=normalize_windows_path(display_name),
             target_path=target_path,
             message=message,
-            data_type=f"plaso:{parser}",
-            parser=parser,
+            data_type=raw_row.get("data_type") or f"plaso:{parser}",
+            parser=parser or "generic",
             user_sid=user_sid,
             username=username,
-            confidence_level="HIGH" if artifact_source != "Generic" else "MEDIUM",
+            confidence_level=(
+                raw_row.get("confidence_level")
+                or raw_row.get("confidence")
+                or ("HIGH" if artifact_source != "Generic" else "MEDIUM")
+            ).upper(),
             extra_attributes=extra_attrs
         )
 
