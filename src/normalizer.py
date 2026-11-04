@@ -6,7 +6,7 @@ matching docs/event_schema.md.
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import csv
 import json
 import re
@@ -40,17 +40,19 @@ class PlasoNormalizer:
         """Extract referenced target object path from raw Plaso message or display name."""
         # Check for explicit "Path: ..." or "[C:\...]" patterns
         path_patterns = [
-            r"Path:\s*([a-zA-Z]:\\[^\s,\]]+)",
+            r"Path:\s*(.*?)(?=\s+(?:Hash:|PID:|Volume serial:|Parent Process Name:)|$)",
             r"\[([a-zA-Z]:\\[^\]]+)\]",
-            r"Object Name:\s*([a-zA-Z]:\\[^\s,]+)",
-            r"Deleted file:\s*([a-zA-Z]:\\[^\s,]+)",
-            r"New Process Name:\s*([a-zA-Z]:\\[^\s,]+)",
+            r"Object Name:\s*(.*?)(?=\s+(?:Access Mask:|Process:)|$)",
+            r"Deleted file:\s*(.*?)(?=\s+(?:Original size:|$)|$)",
+            r"New Process Name:\s*(.*?)(?=\s+(?:Parent Process Name:|PID:|User:)|$)",
             r"([a-zA-Z]:\\[A-Za-z0-9_\-\.\\]+)"
         ]
         for pattern in path_patterns:
             match = re.search(pattern, message, re.IGNORECASE)
             if match:
-                return normalize_windows_path(match.group(1))
+                candidate = match.group(1).strip().rstrip(",")
+                if re.match(r"^[a-zA-Z]:\\", candidate):
+                    return normalize_windows_path(candidate)
 
         # Fallback to display_name if valid path
         if re.match(r"^[a-zA-Z]:\\", display_name):
@@ -123,24 +125,51 @@ class PlasoNormalizer:
     @classmethod
     def normalize_record(cls, raw_row: Dict[str, str], index: int) -> ForensicEvent:
         """Convert a single raw Plaso row into a standardized ForensicEvent."""
-        event_id = f"EVT-{index:04d}"
+        event_id = raw_row.get("event_id") or f"EVT-{index:04d}"
 
         # Parse timestamp
-        raw_time = raw_row.get("datetime") or raw_row.get("timestamp") or ""
+        raw_time = (
+            raw_row.get("datetime")
+            or raw_row.get("timestamp")
+            or raw_row.get("timestamp_utc")
+            or ""
+        )
         dt = parse_iso_utc(raw_time)
         iso_timestamp = dt.isoformat()
 
-        timestamp_desc = raw_row.get("timestamp_desc", "Unknown")
+        timestamp_desc = (
+            raw_row.get("timestamp_desc")
+            or raw_row.get("timestamp_type")
+            or "Unknown"
+        )
         parser = raw_row.get("parser", "generic")
         source = raw_row.get("source", "")
         source_long = raw_row.get("source_long", "")
-        message = raw_row.get("message", "").strip()
-        display_name = raw_row.get("display_name", "")
+        message = (raw_row.get("message") or raw_row.get("description") or "").strip()
+        display_name = raw_row.get("display_name") or raw_row.get("source_file", "")
+        artifact_hint = raw_row.get("artifact_source") or raw_row.get("artifact_type", "")
+        target_hint = raw_row.get("target_path") or raw_row.get("object_path", "")
 
-        artifact_source = cls.detect_artifact_source(parser, source, source_long, message)
-        target_path = cls.extract_windows_path(message, display_name)
+        artifact_source = artifact_hint or cls.detect_artifact_source(
+            parser, source, source_long, message
+        )
+        target_path = target_hint or cls.extract_windows_path(message, display_name)
         username, user_sid = cls.extract_user_info(message, display_name)
+        username = raw_row.get("username") or username
+        user_sid = raw_row.get("user_sid") or user_sid
         extra_attrs = cls.extract_extra_attributes(message, artifact_source)
+        raw_extra = raw_row.get("extra_attributes")
+        if raw_extra:
+            try:
+                parsed_extra = json.loads(raw_extra)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid extra_attributes JSON: {exc}") from exc
+            if not isinstance(parsed_extra, dict):
+                raise ValueError("extra_attributes must contain a JSON object")
+            extra_attrs = {**parsed_extra, **extra_attrs}
+        for field in ("timestamp_type", "evidence_reference", "validation_status"):
+            if raw_row.get(field):
+                extra_attrs.setdefault(field, raw_row[field])
 
         return ForensicEvent(
             event_id=event_id,
@@ -150,31 +179,46 @@ class PlasoNormalizer:
             source_file=normalize_windows_path(display_name),
             target_path=target_path,
             message=message,
-            data_type=f"plaso:{parser}",
-            parser=parser,
+            data_type=raw_row.get("data_type") or f"plaso:{parser}",
+            parser=parser or "generic",
             user_sid=user_sid,
             username=username,
-            confidence_level="HIGH" if artifact_source != "Generic" else "MEDIUM",
+            confidence_level=(
+                raw_row.get("confidence_level")
+                or raw_row.get("confidence")
+                or ("HIGH" if artifact_source != "Generic" else "MEDIUM")
+            ).upper(),
             extra_attributes=extra_attrs
         )
 
     @classmethod
-    def normalize_file(cls, input_path: str) -> List[ForensicEvent]:
+    def normalize_file_with_report(
+        cls, input_path: str, source_label: Optional[str] = None
+    ) -> Tuple[List[ForensicEvent], List[Dict[str, Any]]]:
         """Read a raw Plaso CSV file and normalize all records."""
         path = Path(input_path)
         if not path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         events: List[ForensicEvent] = []
+        errors: List[Dict[str, Any]] = []
         with open(path, "r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             idx = 1
             for row in reader:
                 try:
                     event = cls.normalize_record(row, idx)
+                    if source_label:
+                        event.extra_attributes.setdefault("source_label", source_label)
                     events.append(event)
                     idx += 1
                 except Exception as e:
-                    # Skip malformed lines while reporting
-                    print(f"Warning: Skipping line {idx} due to error: {e}")
+                    errors.append({"record": idx, "error": str(e), "row": dict(row)})
+                    idx += 1
+        return events, errors
+
+    @classmethod
+    def normalize_file(cls, input_path: str) -> List[ForensicEvent]:
+        """Read a raw Plaso CSV file and normalize all valid records."""
+        events, _ = cls.normalize_file_with_report(input_path)
         return events
