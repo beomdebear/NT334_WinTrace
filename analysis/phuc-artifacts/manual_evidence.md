@@ -32,7 +32,8 @@
 - **Diễn giải timestamp:**
   - Key LastWrite 20:28:17 chỉ gắn chắc với mục **MRU 0** (`pricing decision`) ⇒ đó là thư mục được mở cuối cùng trong `Secret Project Data`.
   - `design` (MRU 5): thời điểm đáng tin là First interacted 20:24:12 (UsrClass) / 20:24:14 (NTUSER).
-  - Hai hive lệch nhau ~2 giây cho cùng thư mục – bình thường vì hai hive được ghi độc lập.
+  - Hai hive lệch nhau ~2 giây cho thư mục `design` (trên toàn bộ CASE01: 0–33 giây, xem `artifact_validation_week2.md` mục 4.3). Đây là **một** lần duyệt được ghi ở hai nơi, không phải hai bằng chứng độc lập.
+  - Tuần 2: LastWrite của các key `\8\0\0\2`, `\8\0\0\2\0`, `\8\0\0\2\1` (UsrClass) và `\0\0\0\2\0` (NTUSER) được đọc lại bằng python-registry (công cụ thứ ba): khớp đến mili-giây.
 - **Artifact bổ trợ:** LNK `(secret_project)_pricing_decision.xlsx.lnk` Created 2015-03-23 20:26:53Z (NetworkPath `\\10.11.11.128\SECURED_DRIVE`), `[secret_project]_final_meeting.pptx.lnk` Created 20:27:33Z.
 - **Observed:** user `informant` đã duyệt cây thư mục `Secret Project Data` trên share `\\10.11.11.128\secured_drive` trong khoảng 20:24–20:28Z ngày 2015-03-23 (16:24–16:28 EDT); 2 file trên share được mở qua Shell.
 - **Inferred:** user rà soát dữ liệu mật trước khi thu thập/rò rỉ.
@@ -44,7 +45,7 @@
 ---
 
 ### CASE01-F004 – File winter_whether_advisory.zip trên thiết bị ngoài E:
-- **Trạng thái:** VERIFIED phần ShellBags (2026-10-28). Phần nhận dạng thiết bị (USBSTOR) chưa kiểm.
+- **Trạng thái:** VERIFIED phần ShellBags (2026-10-28). Nhận dạng thiết bị: **bổ sung tuần 2** (xem cuối mục).
 - **Artifact:** ShellBags (UsrClass.dat) + LNK
 - **Tool trích xuất:** SBECmd 2026.10.2; LECmd 2026.10.3 (chạy trên F:)
 - **Tool kiểm chứng:** ShellBags Explorer 2026.10.1, time zone UTC
@@ -63,6 +64,12 @@
 - **Giới hạn:** ShellBags không chứng minh nội dung zip là dữ liệu mật; tên file "winter_whether_advisory" có thể là ngụy trang – cần kiểm tra nội dung.
 - **NIST-confirmed (EDT+4=UTC):** 09:58 EDT cắm USB **RM#2**, 09:59 EDT copy toàn bộ `Secret Project Data` sang RM#2 (khớp Created 13:59:38Z), 10:00 EDT mở `winter_whether_advisory.zip` – NIST ghi JumpList 10:01:23 và ShellBag 10:01:29 EDT, khớp chính xác LNK 14:01:23Z và ShellBag 14:01:29Z. ⇒ Ổ E: tại thời điểm này là **RM#2**, không phải RM#1 (RM#1 cũng từng là E: lúc 13:38Z).
 - **Event đã verified:** CASE01-SB0001, 0171, 0254, 0266–0270.
+- **Nhận dạng thiết bị (tuần 2, python-registry trên SYSTEM/SOFTWARE):**
+  - Jump List (`AutomaticDestinations_fromF.csv` L9) ghi `E:\Secret Project Data\design\winter_whether_advisory.zip` với **VSN `9E6A5B82`**, nhãn "IAMAN $".
+  - EMDMgmt `TO_B__IAMAN $_@_2657770370` (= `9E6A5B82`) LastWrite 2015-03-24 13:58:34Z.
+  - USBSTOR SanDisk Cruzer Fit serial `4C530012550531106501`, first install 2015-03-24 13:58:33Z.
+  - **Observed:** file zip nằm trên volume `9E6A5B82`. **Inferred:** volume này thuộc USB serial `…106501` (liên kết theo thời điểm, cách 1 giây) = RM#2 (NIST-confirmed).
+  - Python-registry: LastWrite `BagMRU\1\0\1\4` = 14:01:29.766236, khớp GUI.
 - **Ảnh:** `case_notes/img/F004_zip_E.png`
 
 ---

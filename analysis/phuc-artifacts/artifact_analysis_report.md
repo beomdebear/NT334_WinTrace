@@ -58,7 +58,7 @@ Toàn bộ lệnh chạy được ghi trong `case_notes/command_log.md`.
 ### 3.2. Ngữ nghĩa timestamp
 - **Key LastWrite** chỉ gắn chắc với mục **MRU 0**. Ví dụ: trong `Secret Project Data` trên share, `pricing decision` (MRU 0) có Last interacted = LastWrite = 20:28:17Z, còn `design` (MRU 5) chỉ có First interacted 20:24:12Z đáng tin.
 - **Target Created/Modified/Accessed** trong shell item là MAC của thư mục/file đích, **không phải** thời điểm truy cập.
-- Độ phân giải: shell item dùng FAT time (2 giây); hai hive ghi cùng thư mục lệch ~2 giây.
+- Độ phân giải: shell item dùng FAT time (2 giây); hai hive ghi cùng thư mục lệch 0–33 giây (*đính chính tuần 2*: bản đầu ghi "~2 giây").
 
 ### 3.3. Kết quả trích xuất
 - **109 ShellBag** duy nhất từ 2 hive (SBECmd, 0 trùng) → **383 event** trong `shellbags_findings.csv` (mỗi timestamp một event, có `timestamp_type`).
@@ -142,7 +142,7 @@ Toàn bộ lệnh chạy được ghi trong `case_notes/command_log.md`.
 | 24/03 16:40–16:41 | 20:40–20:41Z | Đổi tên thư mục thành de/pd/prog/prop/tr, ghi CD-R | ShellBags CDBurn `pd` 20:44:10Z, `prog`/`prop` 20:44:11Z | ✅ (F005 verified) |
 | 24/03 16:44 | 20:44Z | Kiểm tra nội dung CD | LNK zip `D:\de` 20:44:18Z; ShellBag `...zip\ppt\slideMasters` 20:44:18Z | ✅ |
 | 24/03 16:57–17:01 | 20:57–21:01Z | Copy ảnh Koala/Penguins/Tulips, kiểm tra CD | LNK 3 ảnh trên D: (serial AE88F176) 21:01:10–14Z | ✅ |
-| 24/03 17:02 | 21:02Z | Quick-format RM#2 | – | ✗ |
+| 24/03 17:02 | 21:02Z | Quick-format RM#2 | *(tuần 2)* EMDMgmt: cùng nhãn "IAMAN $", VSN mới `B4D85399` LW 21:02:34Z; MountPoints2 21:02:33Z | ◐ (tuần 1: ✗) |
 | 25/03 10:50 | 14:50Z | Cài Eraser, CCleaner | Prefetch installer 14:50:14Z, 14:57:56Z | ✅ |
 | 25/03 11:13 | 15:13Z | Eraser xóa `Desktop\temp` | Prefetch ERASER.EXE 15:13:30Z; ShellBag `Desktop\temp` tồn tại | ✅ |
 | 25/03 11:14 | 15:14Z | Empty Recycle Bin | Recycle Bin trống (RBCmd 0 file) – chỉ là vắng mặt dấu vết | ◐ |
@@ -153,6 +153,8 @@ Toàn bộ lệnh chạy được ghi trong `case_notes/command_log.md`.
 | 25/03 11:28 | 15:28Z | In ra XPS và xem | LNK .xps 15:28:33Z; Prefetch XPSRCHVW 15:28:47Z | ✅ |
 
 **Tổng hợp:** 26 hành động – ✅ 19, ◐ 4, ✗ 3. Các hành động ✗ (đổi tên file, xóa thư mục, format USB) là hành vi trên **file system**, nằm ngoài phạm vi ShellBags/LNK/Prefetch ⇒ cần $MFT/$UsnJrnl (đề xuất tuần 2).
+
+> **Cập nhật tuần 2:** với Registry USB (EMDMgmt, MountPoints2), hành động quick-format RM#2 chuyển từ ✗ sang ◐ ⇒ ✅ 19, ◐ 5, ✗ 2. Xem `artifact_validation_week2.md`.
 
 > Đây là đối chiếu trên các mốc NIST liệt kê, **không phải** precision/recall: NIST không liệt kê mọi hành vi, và một hành động có thể có nhiều artifact.
 
@@ -190,4 +192,4 @@ Chi tiết: `candidate_findings.md`, `manual_evidence.md`.
    - Cùng **tên file** trong LNK và ShellBag (`...\file.zip`) trong cửa sổ ≤ 10 giây ⇒ "mở file từ thư mục X".
    - ShellBag **CDBurn** + LNK có DriveType Optical ⇒ "ghi/kiểm tra đĩa quang".
    - Prefetch công cụ wipe/cleaner + Recycle Bin trống ⇒ "nghi vấn anti-forensics".
-   - Correlation window tối thiểu vài giây (hai hive lệch ~2 giây).
+   - Correlation window: xem `correlation_evidence_notes.md` (tuần 2).

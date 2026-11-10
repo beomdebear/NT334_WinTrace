@@ -119,6 +119,6 @@ Ba mức kết luận: **Observed** = artifact cho thấy trực tiếp · **Inf
 
 ## Việc cần làm để nâng các finding lên "verified"
 1. Mở UsrClass.dat / NTUSER.DAT trong ShellBags Explorer, đối chiếu từng path + thời gian ở trên.
-2. Kiểm tra USBSTOR / MountPoints2 để xác định E: và V:.
+2. ~~Kiểm tra USBSTOR / MountPoints2 để xác định E: và V:.~~ Đã làm tuần 2: `volume_map_case01.csv`.
 3. Đối chiếu với đáp án NIST (quy giờ đáp án về UTC).
 4. ~~Chạy lại LECmd/JLECmd/PECmd trên ổ F:~~ – ĐÃ LÀM (output `fromF`). Ghi vào Hạn chế: bản copy bằng Copy-Item mất Created/Accessed của LNK và .pf; output trong `20261028_103708` cho LNK/Prefetch không dùng cho timeline.
