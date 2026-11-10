@@ -1,0 +1,27 @@
+source_hive,key_path,item,timestamp_utc,timestamp_meaning,detail
+SYSTEM,Select,Current,,,1 -> ControlSet001
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012450531101593&0,4C530012450531101593,2015-03-24T13:38:00Z,Key LastWrite (cập nhật khi cắm lại/driver ghi),Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01 | FriendlyName=SanDisk Cruzer Fit USB Device
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012450531101593&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\00000064,4C530012450531101593,2015-03-23T18:31:11Z,first_install (key LastWrite),SanDisk Cruzer Fit USB Device
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012450531101593&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\00000065,4C530012450531101593,2015-03-23T18:31:11Z,install_date (key LastWrite),SanDisk Cruzer Fit USB Device
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012550531106501&0,4C530012550531106501,2015-03-24T13:58:33Z,Key LastWrite (cập nhật khi cắm lại/driver ghi),Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01 | FriendlyName=SanDisk Cruzer Fit USB Device
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012550531106501&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\00000064,4C530012550531106501,2015-03-24T13:58:33Z,first_install (key LastWrite),SanDisk Cruzer Fit USB Device
+SYSTEM,ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer_Fit&Rev_2.01\4C530012550531106501&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\00000065,4C530012550531106501,2015-03-24T13:58:33Z,install_date (key LastWrite),SanDisk Cruzer Fit USB Device
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-18,S-1-5-18,2009-07-14T04:53:25Z,Key LastWrite,ProfileImagePath=%systemroot%\system32\config\systemprofile
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-19,S-1-5-19,2015-03-25T11:14:18Z,Key LastWrite,ProfileImagePath=C:\Windows\ServiceProfiles\LocalService
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-20,S-1-5-20,2015-03-25T11:14:18Z,Key LastWrite,ProfileImagePath=C:\Windows\ServiceProfiles\NetworkService
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-21-2425377081-3129163575-2985601102-1000,S-1-5-21-2425377081-3129163575-2985601102-1000,2015-03-25T15:30:57Z,Key LastWrite,ProfileImagePath=C:\Users\informant
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-21-2425377081-3129163575-2985601102-1001,S-1-5-21-2425377081-3129163575-2985601102-1001,2015-03-22T15:57:41Z,Key LastWrite,ProfileImagePath=C:\Users\admin11
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\ProfileList\S-1-5-21-2425377081-3129163575-2985601102-1003,S-1-5-21-2425377081-3129163575-2985601102-1003,2015-03-22T15:56:58Z,Key LastWrite,ProfileImagePath=C:\Users\temporary
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\EMDMgmt\ED_Q__System Reserved_403308837,180A0125,2015-03-25T10:33:18Z,Key LastWrite (≈ lần volume được gắn gần nhất),label_part=ED_Q__System Reserved | volume_serial_dec=403308837
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\EMDMgmt\ED_Q___3389815368,CA0C7A48,2015-03-25T10:15:53Z,Key LastWrite (≈ lần volume được gắn gần nhất),label_part=ED_Q__ | volume_serial_dec=3389815368
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\EMDMgmt\JOJ___Authorized USB_1551191358,5C754D3E,2015-03-23T18:31:12Z,Key LastWrite (≈ lần volume được gắn gần nhất),label_part=JOJ___Authorized USB | volume_serial_dec=1551191358
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\EMDMgmt\TO_B__IAMAN $_@_2657770370,9E6A5B82,2015-03-24T13:58:34Z,Key LastWrite (≈ lần volume được gắn gần nhất),label_part=TO_B__IAMAN $_@ | volume_serial_dec=2657770370
+SOFTWARE,Microsoft\Windows NT\CurrentVersion\EMDMgmt\TO_B__IAMAN $_@_3034076057,B4D85399,2015-03-24T21:02:34Z,Key LastWrite (≈ lần volume được gắn gần nhất),label_part=TO_B__IAMAN $_@ | volume_serial_dec=3034076057
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\##10.11.11.128#secured_drive,##10.11.11.128#secured_drive,2015-03-23T20:26:04Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\CPC,CPC,2015-03-22T14:34:43Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\{662626a6-d181-11e4-9591-000c29ff2429},{662626a6-d181-11e4-9591-000c29ff2429},2015-03-24T13:38:00Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\{a2f2048e-d228-11e4-b630-000c29ff2429},{a2f2048e-d228-11e4-b630-000c29ff2429},2015-03-24T21:02:33Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\{c9a1c041-d2d7-11e4-9dae-806e6f6e6963},{c9a1c041-d2d7-11e4-9dae-806e6f6e6963},2015-03-22T14:56:01Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\{c9a1c044-d2d7-11e4-9dae-806e6f6e6963},{c9a1c044-d2d7-11e4-9dae-806e6f6e6963},2015-03-24T21:01:39Z,Key LastWrite (≈ lần user gắn volume/share gần nhất),
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\Map Network Drive MRU,a,2015-03-23T20:26:04Z,Key LastWrite,\\10.11.11.128\secured_drive
+NTUSER.DAT,Software\Microsoft\Windows\CurrentVersion\Explorer\Map Network Drive MRU,MRUList,2015-03-23T20:26:04Z,Key LastWrite,a

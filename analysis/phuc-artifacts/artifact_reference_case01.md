@@ -41,7 +41,7 @@ Quy ước giờ: mọi timestamp ở **UTC**. Giờ máy nghi phạm = UTC − 
 
 **Quan sát thực tế trên CASE01**
 - 109 ShellBag duy nhất (NTUSER.DAT + UsrClass.dat), xuất ra 383 event theo schema nhóm.
-- Hai hive ghi cùng một thư mục lệch nhau ~2 giây (`design`: UsrClass 20:24:12, NTUSER 20:24:14) ⇒ correlation window nên ≥ vài giây.
+- Hai hive ghi cùng một thư mục lệch nhau **0–33 giây** (`design`: UsrClass 20:24:12, NTUSER 20:24:14; share: UsrClass 20:23:28, NTUSER 20:24:01). *Đính chính tuần 2: tuần 1 ghi "~2 giây" là sai.* Hai bản ghi này là **một** hành động, không phải hai bằng chứng độc lập.
 - Thư mục `Desktop\S data` bị xóa bằng Shift+Delete lúc 14:07Z ngày 24/03 (theo NIST) nhưng ShellBags vẫn giữ toàn bộ cây thư mục con.
 - Shell type `CDBurn` xác định thư mục nằm trong **khu chờ ghi đĩa** của ổ quang.
 - Target Accessed `04:00:00` (= 00:00 EDT) là dấu hiệu hệ thống file **FAT** (chỉ lưu ngày truy cập).
@@ -127,8 +127,10 @@ Quy ước giờ: mọi timestamp ở **UTC**. Giờ máy nghi phạm = UTC − 
 |---|---|---|
 | `Select\Current` | SYSTEM | Xác định ControlSet đang dùng (CASE01: 1) |
 | `ControlSet001\Control\TimeZoneInformation` | SYSTEM | Timezone: Eastern Standard Time, Bias 300, ActiveTimeBias 240 (UTC−4) |
-| `ControlSet001\Enum\USBSTOR`, `MountedDevices` | SYSTEM | Nhận dạng USB (serial) – **cần làm** để phân biệt RM#1/RM#2 |
-| `Software\Microsoft\Windows NT\CurrentVersion\ProfileList` | SOFTWARE | Map SID → user – **cần làm** |
+| `ControlSet001\Enum\USBSTOR`, `MountedDevices` | SYSTEM | Nhận dạng USB (serial): RM#1 `4C530012450531101593`, RM#2 `4C530012550531106501` – **đã làm tuần 2** (`tool_output/registry/registry_usb_network.csv`) |
+| `Software\Microsoft\Windows NT\CurrentVersion\ProfileList` | SOFTWARE | SID → user: `-1000` informant, `-1001` admin11, `-1003` temporary – **đã làm tuần 2** |
+| `Software\Microsoft\Windows NT\CurrentVersion\EMDMgmt` | SOFTWARE | Nhãn + volume serial của volume từng gắn: liên kết VSN trong LNK/Jump List với USB – **tuần 2** |
+| `...\Explorer\Map Network Drive MRU` | NTUSER.DAT | Ổ mạng đã ánh xạ (`\\10.11.11.128\secured_drive`) – **tuần 2** |
 | `...\Explorer\MountPoints2`, `Network\V` | NTUSER.DAT | Ổ mạng ánh xạ (V:) |
 
 ---
@@ -141,3 +143,26 @@ Quy ước giờ: mọi timestamp ở **UTC**. Giờ máy nghi phạm = UTC − 
 | Timestamp nằm **trong** artifact (ShellBags, LastRun, MAC đích trong LNK) | Không bị ảnh hưởng khi copy | – |
 | Cùng ký tự ổ cho nhiều thiết bị | E: là RM#1 lúc 13:38Z nhưng là RM#2 lúc 13:58Z+ ngày 24/03 | Dùng volume serial (LNK), USBSTOR để phân biệt |
 | Ghi log với hậu tố `Z` nhưng là giờ local | Sai múi giờ trong log thu thập lượt 1 | Dùng `(Get-Date).ToUniversalTime()` |
+
+---
+
+## 8. Bổ sung ngữ nghĩa timestamp (tuần 2)
+
+Đã kiểm trên dữ liệu CASE01 bằng 3 công cụ (SBECmd, ShellBags Explorer, python-registry). Chi tiết: `artifact_validation_week2.md`.
+
+| Timestamp ShellBags | Thực chất là gì | Ý nghĩa forensic | `semantic_class` |
+|---|---|---|---|
+| First Interacted | LastWrite của **key con** BagMRU (key được tạo khi thư mục được mở lần đầu). Đã xác nhận: `\8\0\0\2\0` LastWrite = First Interacted của `design` (20:24:12.943) | Lần đầu thư mục được tương tác qua Shell | `user_interaction` |
+| Last Interacted | LastWrite của key cha, chỉ gán cho mục **MRU 0** | Lần gần nhất thư mục được tương tác | `user_interaction` |
+| Key LastWrite, MRU 0 | Như trên | Như trên | `user_interaction` |
+| Key LastWrite, MRU > 0 | Key cha bị ghi vì **thư mục khác** | Không gán được cho thư mục này | `registry_write_unattributed` |
+| Target Created / Modified / Accessed | MAC của thư mục/file đích lưu trong shell item, FAT 2 giây, Windows ghi ở UTC | Trạng thái đối tượng lúc ShellBag được ghi, **không** phải hành động. Accessed trên FAT chỉ có **ngày** (hiện 04:00:00Z = 00:00 EDT) | `target_metadata` |
+
+**Quy tắc dùng trong correlation**
+1. Chỉ dùng `is_user_activity = true` khi áp dụng time window.
+2. Hai bản ghi cùng thư mục ở NTUSER.DAT và UsrClass.dat (`cross_hive_twin_ids`) là **một** hành động.
+3. Nhiều event KeyLastWrite cùng mốc (`registry_write_burst`) là **một** lần ghi registry.
+4. Ký tự ổ không định danh thiết bị: dùng `volume_map_case01.csv` (USBSTOR + EMDMgmt + VSN trong LNK/Jump List).
+5. Jump List của Explorer ("Windows Explorer Pinned and Recent") và ShellBags cùng do Explorer ghi cho cùng thao tác (lệch 0–6 s): không phải hai nguồn độc lập.
+6. Một file LNK được dùng lại cho các file **cùng tên** ở vị trí khác: `SourceCreated` thuộc vị trí cũ, path hiện tại thuộc lần mở cuối (ví dụ `winter_whether_advisory.zip.lnk`: Created trên E: lúc 14:01:23Z, path hiện tại `D:\de\...` lúc 20:44:18Z).
+7. Prefetch `FilesLoaded` chứa tên file **không** đủ để kết luận chương trình đã mở file (ví dụ `IEXPLORE.EXE` có `RESIGNATION_LETTER...DOCX`).
