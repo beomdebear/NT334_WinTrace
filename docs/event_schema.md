@@ -180,3 +180,25 @@ Kết quả tương quan từ **Correlation Engine** được chuẩn hóa theo 
   }
 }
 ```
+
+## 6. Tương thích Schema v2 của CASE01
+
+Output artifact raw của CASE01 có thể dùng các tên trường:
+`timestamp_utc`, `timestamp_type`, `artifact_type`, `object_path`,
+`evidence_reference`, `confidence` và `validation_status`. Đây là format
+đầu vào v2 của artifact, không phải timeline của scenario Alice.
+
+`src.normalizer.PlasoNormalizer` chấp nhận cả format v2 này và format unified
+(`timestamp`, `timestamp_desc`, `artifact_source`, `target_path`, ...). Khi
+chuẩn hóa, các trường provenance v2 được giữ trong `extra_attributes` và
+được lưu thêm vào các cột SQLite tương ứng:
+
+- `schema_version`
+- `timestamp_type`
+- `artifact_type`
+- `object_path`
+- `evidence_reference`
+- `validation_status`
+
+Nhờ vậy ShellBags CASE01 có thể được import trực tiếp mà không làm mất
+timestamp semantics hoặc evidence reference.
