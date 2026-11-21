@@ -12,6 +12,9 @@ from typing import Any, Iterable, List, Optional
 from src.schema import ForensicEvent
 
 
+PROVENANCE_FIELDS = ("timestamp_type", "evidence_reference", "validation_status", "case_id")
+
+
 class TimelineStore:
     """Stores normalized events without discarding provenance metadata."""
 
@@ -23,7 +26,12 @@ class TimelineStore:
         self.initialize()
 
     def initialize(self) -> None:
-        self.connection.executescript("""
+        with self.connection:
+            self.connection.execute("BEGIN IMMEDIATE")
+            self._initialize_schema()
+
+    def _initialize_schema(self) -> None:
+        self.connection.execute("""
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY,
                 schema_version TEXT NOT NULL DEFAULT 'v2',
@@ -45,13 +53,9 @@ class TimelineStore:
                 confidence_level TEXT NOT NULL,
                 evidence_reference TEXT,
                 validation_status TEXT,
+                case_id TEXT,
                 extra_attributes TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
-            CREATE INDEX IF NOT EXISTS idx_events_artifact ON events(artifact_source);
-            CREATE INDEX IF NOT EXISTS idx_events_target ON events(target_path);
-            CREATE INDEX IF NOT EXISTS idx_events_username ON events(username);
-            CREATE INDEX IF NOT EXISTS idx_events_validation ON events(validation_status);
+            )
         """)
         columns = {
             row["name"] for row in self.connection.execute("PRAGMA table_info(events)")
@@ -63,11 +67,20 @@ class TimelineStore:
             "object_path": "TEXT NOT NULL DEFAULT ''",
             "evidence_reference": "TEXT",
             "validation_status": "TEXT",
+            "case_id": "TEXT",
         }
         for name, definition in migrations.items():
             if name not in columns:
                 self.connection.execute(f"ALTER TABLE events ADD COLUMN {name} {definition}")
-        self.connection.commit()
+        indexes = {
+            "timestamp": "timestamp",
+            "artifact": "artifact_source",
+            "target": "target_path",
+            "username": "username",
+            "validation": "validation_status",
+        }
+        for name, column in indexes.items():
+            self.connection.execute(f"CREATE INDEX IF NOT EXISTS idx_events_{name} ON events({column})")
 
     @staticmethod
     def fingerprint(event: ForensicEvent) -> str:
@@ -82,30 +95,56 @@ class TimelineStore:
 
     def insert_events(self, events: Iterable[ForensicEvent]) -> int:
         rows = []
+        provenance_rows = []
         for event in events:
+            fingerprint = self.fingerprint(event)
+            provenance = {
+                field: getattr(event, field)
+                for field in PROVENANCE_FIELDS
+            }
+            for field, value in provenance.items():
+                if value is None:
+                    provenance[field] = event.extra_attributes.get(field)
+            if any(value is not None for value in provenance.values()):
+                provenance_rows.append({"fingerprint": fingerprint, **provenance})
+
             rows.append((
-                "v2", event.event_id, self.fingerprint(event), event.timestamp,
-                event.extra_attributes.get("timestamp_type"),
+                "v2", event.event_id, fingerprint, event.timestamp,
+                provenance["timestamp_type"],
                 event.timestamp_desc, event.artifact_source, event.artifact_source,
                 event.source_file, event.target_path, event.target_path,
                 event.message, event.data_type, event.parser, event.user_sid,
                 event.username, event.confidence_level,
-                event.extra_attributes.get("evidence_reference"),
-                event.extra_attributes.get("validation_status"),
+                provenance["evidence_reference"], provenance["validation_status"],
+                provenance["case_id"],
                 json.dumps(event.extra_attributes, ensure_ascii=False, sort_keys=True),
             ))
-        before = self.connection.total_changes
-        self.connection.executemany("""
-            INSERT OR IGNORE INTO events (
-                schema_version, event_id, fingerprint, timestamp, timestamp_type,
-                timestamp_desc, artifact_source, artifact_type, source_file,
-                target_path, object_path, message, data_type, parser, user_sid,
-                username, confidence_level, evidence_reference, validation_status,
-                extra_attributes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, rows)
-        self.connection.commit()
-        return self.connection.total_changes - before
+        with self.connection:
+            inserted = self.connection.executemany("""
+                INSERT OR IGNORE INTO events (
+                    schema_version, event_id, fingerprint, timestamp, timestamp_type,
+                    timestamp_desc, artifact_source, artifact_type, source_file,
+                    target_path, object_path, message, data_type, parser, user_sid,
+                    username, confidence_level, evidence_reference, validation_status,
+                    case_id, extra_attributes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, rows).rowcount
+
+            # Re-import can restore provenance that an older writer omitted.
+            if inserted < len(rows) and provenance_rows:
+                self.connection.executemany("""
+                    UPDATE events SET
+                        timestamp_type = COALESCE(timestamp_type, :timestamp_type),
+                        evidence_reference = COALESCE(evidence_reference, :evidence_reference),
+                        validation_status = COALESCE(validation_status, :validation_status),
+                        case_id = COALESCE(case_id, :case_id)
+                    WHERE fingerprint = :fingerprint AND (case_id IS NULL OR case_id = :case_id)
+                      AND ((timestamp_type IS NULL AND :timestamp_type IS NOT NULL)
+                        OR (evidence_reference IS NULL AND :evidence_reference IS NOT NULL)
+                        OR (validation_status IS NULL AND :validation_status IS NOT NULL)
+                        OR (case_id IS NULL AND :case_id IS NOT NULL))
+                """, provenance_rows)
+        return inserted
 
     def query(
         self,
@@ -144,16 +183,11 @@ class TimelineStore:
     @staticmethod
     def _row_to_event(row: sqlite3.Row) -> ForensicEvent:
         data = dict(row)
-        data.pop("id")
-        data.pop("fingerprint")
-        data.pop("schema_version")
-        data.pop("timestamp_type")
-        data.pop("artifact_type")
-        data.pop("object_path")
-        data.pop("evidence_reference")
-        data.pop("validation_status")
         data["extra_attributes"] = json.loads(data["extra_attributes"])
-        return ForensicEvent(**data)
+        for field in PROVENANCE_FIELDS:
+            if data[field] is None:
+                data[field] = data["extra_attributes"].get(field)
+        return ForensicEvent.from_dict(data)
 
     def count(self) -> int:
         return int(self.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0])

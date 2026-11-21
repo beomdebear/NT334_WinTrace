@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from src.schema import ForensicEvent
@@ -54,16 +56,85 @@ def test_storage_exposes_schema_v2_columns(tmp_path):
             "timestamp_type": "ShellItem_FolderAccessed",
             "evidence_reference": "Deduplicated.csv:L10",
             "validation_status": "verified",
+            "case_id": "CASE01",
         },
     )
     with TimelineStore(str(database)) as store:
         assert store.insert_events([event]) == 1
         row = store.connection.execute(
             "SELECT schema_version, timestamp_type, artifact_type, object_path, "
-            "evidence_reference, validation_status FROM events"
+            "evidence_reference, validation_status, case_id FROM events"
         ).fetchone()
+        restored, = store.query()
 
     assert tuple(row) == (
         "v2", "ShellItem_FolderAccessed", "ShellBags", r"E:\Secret Project Data",
-        "Deduplicated.csv:L10", "verified",
+        "Deduplicated.csv:L10", "verified", "CASE01",
     )
+    for field, expected in event.extra_attributes.items():
+        assert getattr(restored, field) == expected
+
+
+@pytest.mark.parametrize(("field", "value", "legacy_value"), [
+    ("timestamp_type", "ShellBag_LastInteracted", "Generic"),
+    ("evidence_reference", "Deduplicated.csv:L59", "Legacy.csv:L1"),
+    ("validation_status", "verified", "unverified"),
+    ("case_id", "CASE01", "LEGACY"),
+])
+def test_storage_round_trip_prefers_direct_schema_v2_fields(tmp_path, field, value, legacy_value):
+    database = tmp_path / "timeline.db"
+    event = make_event()
+    setattr(event, field, value)
+    event.extra_attributes[field] = legacy_value
+
+    with TimelineStore(str(database)) as store:
+        assert store.insert_events([event]) == 1
+
+    with TimelineStore(str(database)) as store:
+        restored, = store.query()
+        assert getattr(restored, field) == value
+        assert restored.extra_attributes[field] == legacy_value
+
+
+@pytest.mark.parametrize("legacy_columns", [
+    ("case_id",),
+    ("case_id", "schema_version", "timestamp_type", "artifact_type",
+     "object_path", "evidence_reference", "validation_status"),
+])
+def test_storage_migrates_legacy_database_and_recovers_provenance_on_reimport(tmp_path, legacy_columns):
+    database = tmp_path / "timeline.db"
+    event = make_event()
+    event.extra_attributes = {"case_id": "CASE01"}
+    with TimelineStore(str(database)) as store:
+        assert store.insert_events([event]) == 1
+
+    connection = sqlite3.connect(database)
+    try:
+        with connection:
+            if "validation_status" in legacy_columns:
+                connection.execute("DROP INDEX idx_events_validation")
+            for column in legacy_columns:
+                connection.execute(f"ALTER TABLE events DROP COLUMN {column}")
+    finally:
+        connection.close()
+
+    expected = {
+        "timestamp_type": "ShellBag_LastInteracted",
+        "evidence_reference": "Deduplicated.csv:L59",
+        "validation_status": "verified",
+        "case_id": "CASE01",
+    }
+    for field, value in expected.items():
+        setattr(event, field, value)
+
+    with TimelineStore(str(database)) as store:
+        original, = store.query()
+        assert original.event_id == event.event_id
+        assert original.case_id == "CASE01"
+        assert store.insert_events([event]) == 0
+        assert store.count() == 1
+
+    with TimelineStore(str(database)) as store:
+        restored, = store.query()
+        for field, value in expected.items():
+            assert getattr(restored, field) == value
